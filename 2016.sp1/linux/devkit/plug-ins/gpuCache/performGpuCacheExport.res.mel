@@ -1,0 +1,39 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+displayString -replace -value "Base File Name:" m_performGpuCacheExport.kBaseFileName;
+displayString -replace -value "Cache time range:" m_performGpuCacheExport.kCacheTimeRange;
+displayString -replace -value "Clash Options:" m_performGpuCacheExport.kClashOptions;
+displayString -replace -value "Current frame" m_performGpuCacheExport.kCurrentFrame;
+displayString -replace -value "Creates an Alembic file in a legacy format readable by any Maya version using the Alembic." m_performGpuCacheExport.kDataFormatHDF5Annot;
+displayString -replace -value "HDF5 - Maya 2014 Extension 1 and Legacy" m_performGpuCacheExport.kDataFormatHDF5Label;
+displayString -replace -value "Creates an Alembic 1.5 file usable only by Maya 2014 Extension 1 and future versions of Maya." m_performGpuCacheExport.kDataFormatOgawaAnnot;
+displayString -replace -value "Ogawa - Maya 2014 Extension 1" m_performGpuCacheExport.kDataFormatOgawaLabel;
+displayString -replace -value "Evaluate every" m_performGpuCacheExport.kEvaluateEvery;
+displayString -replace -value "evaluation(s)" m_performGpuCacheExport.kEvaluations;
+displayString -replace -value "Export" m_performGpuCacheExport.kExport;
+displayString -replace -value "File Format:" m_performGpuCacheExport.kFileFormat;
+displayString -replace -value "frame(s)" m_performGpuCacheExport.kFrames;
+displayString -replace -value "GPU Cache Export Options" m_performGpuCacheExport.kGpuCacheExportOptions;
+displayString -replace -value "Increment Filenames" m_performGpuCacheExport.kIncrementFilenames;
+displayString -replace -value "Node Name Suffix" m_performGpuCacheExport.kNodeNameSuffix;
+displayString -replace -value "Optimization Threshold:" m_performGpuCacheExport.kOptimizationThreshold;
+displayString -replace -value "Optimize Animations for Motion Blur:" m_performGpuCacheExport.kOptimizeAnimationsForMotionBlur;
+displayString -replace -value "Optimize Hierarchy:" m_performGpuCacheExport.kOptimizeHierarchy;
+displayString -replace -value "Render settings" m_performGpuCacheExport.kRenderSettings;
+displayString -replace -value "Save every" m_performGpuCacheExport.kSaveEvery;
+displayString -replace -value "Save Multiple Files:" m_performGpuCacheExport.kSaveMultipleFiles;
+displayString -replace -value "Start/End" m_performGpuCacheExport.kStartEnd;
+displayString -replace -value "Start/End:" m_performGpuCacheExport.kStartEnd2;
+displayString -replace -value "Tessellation:" m_performGpuCacheExport.kTessellation;
+displayString -replace -value "Time Slider" m_performGpuCacheExport.kTimeSlider;
+displayString -replace -value "Use Base Tessellation" m_performGpuCacheExport.kUseBaseTessellation;
+displayString -replace -value "Ignores the smoothing of meshes when exporting GPU caches." m_performGpuCacheExport.kUseBaseTessellationAnnot;
+displayString -replace -value "Use Smoothing" m_performGpuCacheExport.kUseSmoothing;
+displayString -replace -value "Exports the GPU cache at the displayed smoothed tessellation." m_performGpuCacheExport.kUseSmoothingTessellationAnnot;
+displayString -replace -value "vertices" m_performGpuCacheExport.kVertices;
+displayString -replace -value "Write Materials:" m_performGpuCacheExport.kWriteMaterials;

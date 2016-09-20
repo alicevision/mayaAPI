@@ -1,0 +1,69 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+global proc dynExprFieldTest() 
+{
+	file -force -new;
+	currentUnit -linear centimeter -angle degree -time film;   
+
+	// Load the plug-in field. 
+	//
+	loadPlugin "dynExprField.so";
+
+	// Test 1 : expression on owner shape 
+
+	// Create the new field node
+	particle -p -8.487083 0 3.977805 -p -8.364536 0 6.178587 -c 1 -name owner;
+	createNode dynExprField -name dynExpr;
+	setAttr dynExpr.applyPerVertex 1;
+    	select -tgl owner;
+    	addDynamic;
+
+	// create particle object.
+	particle -ll -4 0 -5 -ur 5 0 4 -grs 1 -c 1 -name particles;
+	// connect dynExpr field node with the particle object.
+	connectDynamic -f dynExpr particles ;
+
+	// Creation expression to control the attributes on dynExpr.
+	addAttr -ln dynExpr_magnitude -dt doubleArray  ownerShape;
+	addAttr -ln dynExpr_direction -dt vectorArray  ownerShape;
+	dynExpression -s "dynExpr_direction = <<rand(-1,1), rand(-1,1), rand(-1,1)>>;\ndynExpr_magnitude = rand(1,10);" -c ownerShape;
+
+	playbackOptions -e -min 0.00 -max 50.0;
+	currentTime -e 0;
+	play -wait -forward true;
+
+	// Test 2 : expression on non-owner shape
+
+	file -force -new;
+
+	// Create the new field node
+	createNode dynExprField -name dynExpr;
+
+	// create particle object.
+	//
+	particle -ll -4 0 -5 -ur 5 0 4 -grs 1 -c 1 -name particles ;
+
+	// Creation expression to control the attributes on dynExpr.
+	addAttr -ln dynExpr_magnitude -dt doubleArray  particlesShape;
+	addAttr -ln dynExpr_direction -dt vectorArray  particlesShape;
+	dynExpression -s "dynExpr_direction = <<rand(-1,1), rand(-1,1), rand(-1,1)>>;\ndynExpr_magnitude = rand(1,10);" -c particlesShape;
+
+	// connect dynExpr field node with the particle object.
+	//
+	connectDynamic -f dynExpr particles ;
+
+	playbackOptions -e -min 0.00 -max 50.0;
+	currentTime -e 0;
+	play -wait -forward true;
+}

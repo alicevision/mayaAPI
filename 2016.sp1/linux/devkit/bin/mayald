@@ -1,0 +1,152 @@
+#! /bin/sh
+#Tag 0x00270237
+
+# ============================================================================
+# Copyright 2014 Autodesk, Inc. All rights reserved.
+# Use of this software is subject to the terms of the Autodesk
+# license agreement provided at the time of installation or download,
+# or which otherwise accompanies this software in either electronic
+# or hard copy form.
+#==============================================================================
+
+#
+# mayald script
+#	The mayald script is used to link standalone API applications on
+# 	Linux and Mac OS X.  We now support several options for this script:
+#
+#	1) The MAYA_LDCMD environment variable can be set to the linker
+#	you wish to use.
+
+#	2) The Makefiles we supply invoke the mayald script with special
+#	parameters: MAYA_ARCHES="..." and MAYA_LOCATION="...". (Note that there
+#	must be no spaces around the '='.)
+#
+#	The MAYA_ARCHES parameter is only used on OS X. It specifies a
+#	space-separated list of the architectures to be built. E.g. "i386 x86_64"
+#	If not supplied then all architectures supported by the installed Maya
+#	binary will be built.
+#
+#	The MAYA_LOCATION parameter specifies the path where Maya is installed.
+
+#	3) The precedence for MAYA_LOCATION is:
+#		- parameter to the mayald script if set
+#		- environment setting in the shell
+#		- default environment setting( /usr/autodesk... )
+#
+# NOTE: MAYA_LOCATION on the Mac OS X includes the path to the
+# Maya.app/Contents directory.
+#
+
+# Default location for different platforms
+MAYA_LOCATION_OS=""
+UNAME_OS=`uname`
+if [ "${UNAME_OS}" = "Darwin" ]
+then 
+    MAYA_LOCATION_OS="/Applications/Autodesk/maya2016/Maya.app/Contents"
+fi
+
+if [ "${UNAME_OS}" = "Linux" ]
+then
+    MAYA_LOCATION_OS="/usr/autodesk/maya2016"
+fi
+
+# Extract any additional parameters which were passed in.
+MAYA_ARCHES=
+MAYA_LOCATION_PARAM=
+while [ "$1" != "" ]
+do
+	case $1 in
+		MAYA_ARCHES=*)
+			MAYA_ARCHES=`echo $1 | sed -e s/MAYA_ARCHES=//`
+			shift
+		;;
+		MAYA_LOCATION=*)
+			MAYA_LOCATION_PARAM=`echo $1 | sed -e s/MAYA_LOCATION=//`
+			shift
+		;;
+		*)
+			break
+		;;
+	esac
+done
+
+MAYA_LOCATION_ENV=${MAYA_LOCATION:=${MAYA_LOCATION_OS}}
+MAYA_LOCATION=${MAYA_LOCATION_PARAM:=${MAYA_LOCATION_ENV}}
+
+case "${UNAME_OS}" in
+    Linux*)
+		LDCMD=${MAYA_LDCMD:=g++}
+		WARNFLAGS=
+		LDFLAGS="${WARNFLAGS} -m64 -pthread -Wl,-rpath,${MAYA_LOCATION}/lib"
+		LIBS="-L${MAYA_LOCATION}/lib \
+		  -lOpenMayalib \
+		  -lOpenMaya \
+		  -lAnimSlice \
+		  -lDeformSlice \
+		  -lModifiers \
+		  -lDynSlice \
+		  -lKinSlice \
+		  -lModelSlice \
+		  -lNurbsSlice \
+		  -lPolySlice \
+		  -lProjectSlice \
+		  -lImage \
+		  -lShared \
+		  -lTranslators \
+		  -lDataModel \
+		  -lRenderModel \
+		  -lNurbsEngine \
+		  -lDependEngine \
+		  -lCommandEngine \
+		  -lFoundation \
+		  -lIMFbase \
+		  -lm -ldl"
+		;;
+
+   Darwin*)
+			# If MAYA_ARCHES was not passed to us then set it to all the
+			# architectures supported by the installed Maya binary.
+			if [ "${MAYA_ARCHES}" = "" ]
+			then
+				MAYA_ARCHES=`lipo -info ${MAYA_LOCATION}/bin/maya | sed 's/^.*://'`
+			fi
+
+			# Set the flags to build all of the requested architectures.
+			ARCH_FLAGS=
+			for arch in ${MAYA_ARCHES}
+			do
+				ARCH_FLAGS+=" -arch ${arch}"
+			done
+
+        	LDCMD=${MAYA_LDCMD:=clang++}
+        	WARNFLAGS=
+        	DYNLIB_LOCATION=${MAYA_LOCATION}/MacOS
+        	FRAMEWORK_LOCATION=${MAYA_LOCATION}/Frameworks
+        	OTHERFLAGS="-F${FRAMEWORK_LOCATION} -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk -headerpad_max_install_names -dynamic"
+        	LREMAP="-Wl,-executable_path,${DYNLIB_LOCATION}"
+        	LDFLAGS="-stdlib=libstdc++ -fno-gnu-keywords -fpascal-strings -O3 ${ARCH_FLAGS} ${LREMAP} ${OTHERFLAGS}"
+			LIBS="-L${DYNLIB_LOCATION} \
+			  -lShared \
+			  -lDataModel \
+			  -lOpenMaya \
+			  -lAnimSlice \
+			  -lDeformSlice \
+			  -lModifiers \
+			  -lDynSlice \
+			  -lKinSlice \
+			  -lModelSlice \
+			  -lNurbsSlice \
+			  -lPolySlice \
+			  -lProjectSlice \
+			  -lImage \
+			  -lTranslators \
+			  -lRenderModel \
+			  -lNurbsEngine \
+			  -lDependEngine \
+			  -lCommandEngine \
+			  -lFoundation \
+			  -lIMFbase"
+        	;;
+esac
+
+${LDCMD} ${LDFLAGS} $* ${LIBS}

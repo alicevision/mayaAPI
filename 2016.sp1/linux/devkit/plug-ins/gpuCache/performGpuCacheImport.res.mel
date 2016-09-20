@@ -1,0 +1,11 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+displayString -replace -value "Fit Time Range" m_performGpuCacheImport.kFitTimeRange;
+displayString -replace -value "GPU Cache Import Options" m_performGpuCacheImport.kGpuCacheImportOptions;
+displayString -replace -value "Import" m_performGpuCacheImport.kImport;
+displayString -replace -value "Set Current Time to Start Frame" m_performGpuCacheImport.kSetCurrentTimeToStartFrame;

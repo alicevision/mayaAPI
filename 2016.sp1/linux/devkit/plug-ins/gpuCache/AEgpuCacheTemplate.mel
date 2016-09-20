@@ -1,0 +1,200 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//
+//	Procedure Name:
+//	AEgpuCacheTemplate
+//
+//	Description Name;
+//	Creates the attribute editor controls for the gpuCache node
+//
+//	Input Value:
+//	nodeName
+//
+//	Output Value:
+//	None
+//
+
+
+// This is the procedure to open a file browser to choose a cache file
+//
+global proc AEgpuCacheCacheFileBrowser( string $fileNameAttr )
+{
+    // prepare filter and starting dir for file dialog
+    string $filter = (uiRes("m_AEgpuCacheTemplate.kAlembic")) + " (*.abc);;"
+                      + (uiRes("m_AEgpuCacheTemplate.kAllFiles")) + " (*.*)";
+    if (size(`workspace -fileRuleEntry alembicCache`) == 0) {
+        workspace -fileRule "alembicCache" "cache/alembic";
+        workspace -saveWorkspace;
+    }
+    string $workspace = `workspace -fileRuleEntry alembicCache`;
+    $workspace = `workspace -expandName $workspace`;
+
+    // choose a file to import
+    string $result[] = `fileDialog2
+            -returnFilter 1
+            -fileFilter $filter
+            -dialogStyle 2
+            -caption (uiRes("m_AEgpuCacheTemplate.kAssignCacheFile"))
+            -startingDirectory $workspace
+            -fileMode 1
+            `;
+    if (size($result) == 0 || size($result[0]) == 0) {
+        // cancelled
+        return;
+    }
+
+    // set the file name attribute of the cache node
+    setAttr $fileNameAttr -type "string" $result[0];
+
+    // This will force an update to display the effects
+    // of the new cachefile.
+    //
+    currentTime `currentTime -q`;
+}
+
+// The following two procedures generate the UI for file name field
+//
+global proc AEgpuCacheFileNameNew ( string $fileNameAttr )
+{
+	setUITemplate -pushTemplate attributeEditorTemplate;
+
+    columnLayout -adjustableColumn true;
+
+        rowLayout -numberOfColumns 3;
+            text -label (uiRes("m_AEgpuCacheTemplate.kCacheFileName")) fileNameText;
+            textField fileNameField;
+                symbolButton -image "navButtonBrowse.png" browser;
+        setParent ..;
+
+        rowLayout -numberOfColumns 3 -columnAttach3 both left both;
+            separator -style none;  // push the symbol button to the 2nd column
+            symbolButton -image "refresh.png" -annotation (uiRes("m_AEgpuCacheTemplate.kReload")) reloadButton;
+        setParent ..;
+
+    setParent ..;
+
+    setUITemplate -popTemplate;
+
+	AEgpuCacheFileNameReplace( $fileNameAttr );
+}
+
+global proc AEgpuCacheFileNameReplace ( string $fileNameAttr )
+{
+	string $fileName = `getAttr $fileNameAttr`;
+    string $nodeName = `plugNode $fileNameAttr`;
+
+	// file name attribute
+	//
+    connectControl -fileName fileNameField $fileNameAttr;
+    button -e -c ("AEgpuCacheCacheFileBrowser " + $fileNameAttr) browser;
+    symbolButton -e -command ("gpuCache -e -refresh " + $nodeName) reloadButton;
+}
+
+global proc AEgpuCacheTemplate( string $nodeName )
+{
+	editorTemplate -beginScrollLayout;
+
+
+        editorTemplate -beginLayout (uiRes("m_AEgpuCacheTemplate.kGPUCache")) -collapse 0;
+            editorTemplate -callCustom AEgpuCacheFileNameNew AEgpuCacheFileNameReplace "cacheFileName";
+            editorTemplate -label (uiRes("m_AEgpuCacheTemplate.kGeometryPath")) -addControl "cacheGeomPath";
+        editorTemplate -endLayout;
+
+		// supressed attributes
+        editorTemplate -suppress "doubleSided";
+        editorTemplate -suppress "opposite";
+        editorTemplate -suppress "smoothShading";
+        editorTemplate -suppress "controlPoints";
+        editorTemplate -suppress "weights";
+        editorTemplate -suppress "tweak";
+        editorTemplate -suppress "relativeTweak";
+        editorTemplate -suppress "currentUVSet";
+        editorTemplate -suppress "currentColorSet";
+        editorTemplate -suppress "uvSet";
+        editorTemplate -suppress "displayColors";
+        editorTemplate -suppress "displayColorChannel";
+        editorTemplate -suppress "displayImmediate";
+        editorTemplate -suppress "colorSet";
+        editorTemplate -suppress "compInstObjGroups";
+        editorTemplate -suppress "ignoreSelfShadowing";
+        editorTemplate -suppress "featureDisplacement";
+        editorTemplate -suppress "initialSampleRate";
+        editorTemplate -suppress "extraSampleRate";
+        editorTemplate -suppress "textureThreshold";
+        editorTemplate -suppress "normalThreshold";
+        editorTemplate -suppress "boundingBoxScale";
+        editorTemplate -suppress "collisionOffsetVelocityIncrement";
+		editorTemplate -suppress "collisionDepthVelocityIncrement";
+
+        // Render Stats from AEgeometryShapeTemplate.mel
+        source AEgeometryShapeTemplate;  // load global procs
+        editorTemplate -beginLayout (uiRes("m_AEgeometryShapeTemplate.kRenderStats2")) ;
+			editorTemplate -beginNoOptimize;
+			editorTemplate -addControl "castsShadows";
+			editorTemplate -addControl "receiveShadows";
+			editorTemplate -addControl "motionBlur";
+			editorTemplate -addControl "primaryVisibility";
+			editorTemplate -addControl "smoothShading";
+			editorTemplate -addControl "visibleInReflections";
+			editorTemplate -addControl "visibleInRefractions";
+		
+			editorTemplate -interruptOptimize;
+	
+	        	editorTemplate -addControl "doubleSided" 
+						"checkDoubleSided";
+	        	editorTemplate -addControl "opposite";
+			editorTemplate -endNoOptimize;
+	
+			editorTemplate -addSeparator;
+			editorTemplate 
+                -label (uiRes("m_AEgeometryShapeTemplate.kGeometryAntialiasingOverride")) 
+                -addControl "geometryAntialiasingOverride" "checkGeomAntialiasingOverride";
+			editorTemplate -addControl "antialiasingLevel";
+
+			editorTemplate -addControl "shadingSamplesOverride" "checkGeomShadingSamplesOverride";
+			editorTemplate -addControl "shadingSamples";
+			editorTemplate -addControl "maxShadingSamples";
+
+            editorTemplate -suppress "volumeSamplesOverride";
+            editorTemplate -suppress "volumeSamples";
+            editorTemplate -suppress "depthJitter";
+
+			editorTemplate -beginLayout (uiRes("m_AEgeometryShapeTemplate.kMotionBlur3D")) ;
+				editorTemplate -addControl "maxVisibilitySamplesOverride" "checkGeomMaxVisSamplesOverride";
+
+				editorTemplate -callCustom "AEmaxVisibilitySamplesNew" "AEmaxVisibilitySamplesReplace" "maxVisibilitySamples";
+
+			scriptJob -killWithScene
+				-ac "defaultRenderGlobals.motionBlur" 
+				("updateMotionBlurInAE " + $nodeName);		
+			scriptJob -killWithScene
+				-ac "defaultRenderGlobals.motionBlurType" 
+				("updateMotionBlurInAE " + $nodeName);
+
+			editorTemplate -endLayout;
+
+		editorTemplate -endLayout;
+
+		// include/call base class/node attributes
+        AEshapeTemplate $nodeName;
+
+	editorTemplate -addExtraControls;
+
+    editorTemplate -addDynamicControl "collisionEnable";
+	editorTemplate -addDynamicControl "collisionOffset";
+	editorTemplate -addDynamicControl "collisionDepth";
+	editorTemplate -addDynamicControl "collisionPriority";
+	editorTemplate -addDynamicControl "depthMapEnable";
+	editorTemplate -addDynamicControl "depthMapWeight";
+	editorTemplate -addDynamicControl "displayCollision";
+	AEaddDynRampClothCollision "collisionOffsetVelocityMultiplier";
+	AEaddDynRampClothCollision "collisionDepthVelocityMultiplier";
+
+	editorTemplate -endScrollLayout;
+
+}

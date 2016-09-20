@@ -1,0 +1,145 @@
+[
+    {
+        "name": "static_polySphere1",
+        "attributes": [
+            {
+                "name": "axis", 
+                "niceName": "Axis", 
+                "defaultValue": [0.0,0.0,0.0], 
+                "flags": [
+                    "!cached", 
+                    "!keyable"
+                ], 
+                "attributeType": "double3", 
+                "shortName": "ax"
+            }, 
+            {
+                "name": "caching", 
+                "niceName": "Caching", 
+                "min": 0.0, 
+                "max": 1.0, 
+                "defaultValue": 0.0, 
+                "flags": [
+                    "internal", 
+                    "!keyable"
+                ], 
+                "attributeType": "bool", 
+                "shortName": "cch"
+            }, 
+            {
+                "name": "createUVs", 
+                "niceName": "Create UVs", 
+                "defaultValue": 2, 
+                "flags": [
+                    "channelBox", 
+                    "!keyable", 
+                    "renderSource"
+                ], 
+                "attributeType": "enum", 
+                "enumNames": [
+                    "None", 
+                    "Pinched at pole", 
+                    "Sawtooth at pole"
+                ], 
+                "shortName": "cuv"
+            }, 
+            {
+                "name": "isHistoricallyInteresting", 
+                "niceName": "Is Historically Interesting", 
+                "min": 0.0, 
+                "max": 255.0, 
+                "defaultValue": 2.0, 
+                "flags": [
+                    "hidden", 
+                    "!keyable"
+                ], 
+                "attributeType": "byte", 
+                "shortName": "ihi"
+            }, 
+            {
+                "shortName": "msg", 
+                "flags": [
+                    "!canConnectAsDst", 
+                    "hidden", 
+                    "!keyable", 
+                    "!storable"
+                ], 
+                "name": "message", 
+                "niceName": "Message", 
+                "attributeType": "message"
+            }, 
+            {
+                "name": "nodeState", 
+                "niceName": "Node State", 
+                "defaultValue": 0, 
+                "flags": [
+                    "internal", 
+                    "!keyable"
+                ], 
+                "attributeType": "enum", 
+                "enumNames": [
+                    "Normal", 
+                    "HasNoEffect", 
+                    "Blocking", 
+                    "Waiting-Normal,=8", 
+                    "Waiting-HasNoEffect", 
+                    "Waiting-Blocking"
+                ], 
+                "shortName": "nds"
+            }, 
+            {
+                "name": "paramWarn", 
+                "niceName": "Param Warn", 
+                "min": 0.0, 
+                "max": 1.0, 
+                "defaultValue": 1.0, 
+                "flags": [
+                    "hidden", 
+                    "!keyable"
+                ], 
+                "attributeType": "bool", 
+                "shortName": "pw"
+            }, 
+            {
+                "name": "subdivisionsAxis", 
+                "niceName": "Subdivisions Axis", 
+                "min": 3.0, 
+                "defaultValue": 20.0, 
+                "flags": [
+                    "keyable"
+                ], 
+                "attributeType": "long", 
+                "shortName": "sa", 
+                "softMax": 50.0
+            }, 
+            {
+                "name": "subdivisionsHeight", 
+                "niceName": "Subdivisions Height", 
+                "min": 3.0, 
+                "defaultValue": 20.0, 
+                "flags": [
+                    "keyable"
+                ], 
+                "attributeType": "long", 
+                "shortName": "sh", 
+                "softMax": 50.0
+            }, 
+            {
+                "name": "texture", 
+                "niceName": "Texture", 
+                "defaultValue": 1, 
+                "flags": [
+                    "!keyable"
+                ], 
+                "attributeType": "enum", 
+                "enumNames": [
+                    "none", 
+                    "Pinched at pole", 
+                    "Saw tooth at pole"
+                ], 
+                "shortName": "tx"
+            }
+        ]
+    }
+]
+

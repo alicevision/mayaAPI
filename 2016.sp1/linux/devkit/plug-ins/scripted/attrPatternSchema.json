@@ -1,0 +1,677 @@
+{
+	"schemas" : [
+	{
+		"id"		  : "attribute.maya.adsk",
+		"description" : "Schema for properties common to all Maya attributes",
+		"properties"  :
+		{
+			"name" :
+			{
+				"description" : "Long name for the attribute",
+				"type"        : "string",
+				"required"    : true
+			},
+			"shortName" :
+			{
+				"description" : "Short name for the attribute",
+				"type"        : "string",
+				"required"    : false
+			},
+			"niceName" :
+			{
+				"description" : "Nice name for the attribute in the UI",
+				"type"        : "string",
+				"required"    : false
+			},
+			"flags" :
+			{
+				"description" : "Boolean flags for the attribute, and their inverses",
+				"type"		  : "array",
+				"required"    : false,
+				"minItems"    : 1,
+				"items"	:
+				{
+					"description" : "Each element specifies a single flag where flags preceded by an exclamation mark indicate setting the flag to false. Nothing prevents you from specifying a flag and its inverse but the result will be unpredictable.",
+					"type"		  : "string",
+					"enum"		  : [ "readable", "canConnectAsSrc",
+									  "writable", "canConnectAsDst",
+									  "connectable", "storable",
+									  "cached", "array", "indexMatters", "keyable",
+									  "channelBox", "hidden", "usedAsColor", "indeterminant",
+									  "renderSource", "worldSpace", "affectsWorldSpace",
+									  "usedAsFilename", "affectsAppearance",
+									  "usesArrayDataBuilder", "internal",
+									  "!readable", "!canConnectAsSrc",
+									  "!writable", "!canConnectAsDst",
+									  "!connectable", "!storable",
+									  "!cached", "!array", "!indexMatters", "!keyable",
+									  "!channelBox", "!hidden", "!usedAsColor", "!indeterminant",
+									  "!renderSource", "!worldSpace", "!affectsWorldSpace",
+									  "!usedAsFilename", "!affectsAppearance",
+									  "!usesArrayDataBuilder", "!internal" ]
+				}
+			},
+			"categories" :
+			{
+				"description" : "Names of categories to which the attribute belongs",
+				"type"		  : "array",
+				"required"	  : false,
+				"minItems"	  : 1,
+				"items"		  :
+				{
+					"description" : "A category to which the attribute belongs",
+					"type"		  : "string"
+				}
+			},
+			"disconnectBehavior" :
+			{
+				"description" : "What does the attribute do when disconnected?",
+				"type"		  : "string",
+				"enum"		  : [ "delete", "reset", "nothing" ],
+				"required"	  : false
+			}
+		}
+	},
+	{
+		"id"		           : "attributePattern.maya.adsk",
+		"description"          : "A list of attribute patterns",
+		"type"                 : "array",
+		"minItems"             : 1,
+		"additionalProperties" : false,
+		"items" :
+		{
+			"properties" :
+			{
+				"description"          : "Attribute pattern construction informaton",
+				"name"  :
+				{
+					"description" : "Name of the pattern (must be unique)",
+					"type"        : "string",
+					"required"    : true
+				},
+				"attributes"	:
+				{
+					"type"     : "array",
+					"minItems" : 1,
+					"items"    :
+					{
+						"id"				   : "shared.attribute.maya.adsk",
+						"description"		   : "Shared attribute construction information",
+						"extends"			   : { "$ref" : "attribute.maya.adsk" },
+						"type"                 : "object",
+						"properties" :
+						[
+							{
+								"id"		    : "enum.attribute.maya.adsk",
+								"description"	: "Construction information for enum attribute type",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "enum" ]
+								},
+								"defaultValue" :
+								{
+									"description" : "Default value for the attribute, either string or numeric",
+									"type"		  : ["string", "integer"],
+									"required"	  : false
+								},
+								"enumNames" :
+								{
+									"description" : "List of UI names for the enum values. Strings of the form 'NAME=###' use a specific index, otherwise the indexes start at 0 and increment by 1.",
+									"type"		  : "array",
+									"minItems"	  : 1,
+									"required"	  : false,
+									"items"		  :
+									{
+										"description" : "UI name for a single enum values. 'NAME=###' means make a specific index, otherwise the indexes start at 0 and increment by 1.",
+										"type"		  : "string"
+									}
+								}
+							},
+							{
+								"id"		    : "bool.attribute.maya.adsk",
+								"description"	: "Construction information for numeric boolean attribute type",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "bool" ]
+								},
+								"defaultValue" :
+								{
+									"description" : "Default value for the attribute",
+									"type"		  : "boolean",
+									"required"	  : false
+								}
+							},
+							{
+								"id"		    : "numeric.attribute.maya.adsk",
+								"description"	: "Construction information for numeric attribute type",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "byte", "char", "short", "long",
+													  "int", "float", "double",
+													  "addr", "angle", "distance", "time" ]
+								},
+								"defaultValue" :
+								{
+									"description" : "Default value for the attribute",
+									"type"		  : "number",
+									"required"	  : false
+								},
+								"min" :
+								{
+									"description" : "Minimum allowed value for the attribute",
+									"type"		  : "number",
+									"required"	  : false
+								},
+								"max" :
+								{
+									"description" : "Maximum allowed value for the attribute",
+									"type"		  : "number",
+									"required"	  : false
+								},
+								"softMin" :
+								{
+									"description" : "Soft minimum. Specifies the lower default limit used in sliders for this attribute.",
+									"type"		  : "number",
+									"required"	  : false
+								},
+								"softMax" :
+								{
+									"description" : "Soft maximum. Specifies the upper default limit used in sliders for this attribute.",
+									"type"		  : "number",
+									"required"	  : false
+								}
+							},
+							{
+								"id"		    : "numeric2.attribute.maya.adsk",
+								"description"	: "Construction information for numeric attribute type with two children",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "short2", "long2", "int2", "float2", "double2" ]
+								},
+								"defaultValue" :
+								{
+									"description" : "Default value for the attribute",
+									"type"		  : "array",
+									"minItems"	  : 2,
+									"maxItems"	  : 2,
+									"required"	  : false,
+									"items"		  :
+									{
+										"description" : "The two default child values",
+										"type"	      : "number"
+									}
+								},
+								"min" :
+								{
+									"description" : "Minimum allowed value for the attribute",
+									"type"		  : "array",
+									"minItems"	  : 2,
+									"maxItems"	  : 2,
+									"required"	  : false,
+									"items"		  :
+									{
+										"description" : "The two minimum child values",
+										"type"	      : "number"
+									}
+								},
+								"max" :
+								{
+									"description" : "Maximum allowed value for the attribute",
+									"type"		  : "array",
+									"minItems"	  : 2,
+									"maxItems"	  : 2,
+									"required"	  : false,
+									"items"		  :
+									{
+										"description" : "The two maximum child values",
+										"type"	      : "number"
+									}
+								}
+							},
+							{
+								"id"		    : "numeric3.attribute.maya.adsk",
+								"description"	: "Construction information for numeric attribute type with three children",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "short3", "long3", "int3", "float3", "double3" ]
+								},
+								"defaultValue" :
+								{
+									"description" : "Default value for the attribute",
+									"type"		  : "array",
+									"minItems"	  : 3,
+									"maxItems"	  : 3,
+									"required"	  : false,
+									"items"		  :
+									{
+										"description" : "The three default child values",
+										"type"	      : "number"
+									}
+								},
+								"min" :
+								{
+									"description" : "Minimum allowed value for the attribute",
+									"type"		  : "array",
+									"minItems"	  : 3,
+									"maxItems"	  : 3,
+									"required"	  : false,
+									"items"		  :
+									{
+										"description" : "The three minimum child values",
+										"type"	      : "number"
+									}
+								},
+								"max" :
+								{
+									"description" : "Maximum allowed value for the attribute",
+									"type"		  : "array",
+									"minItems"	  : 3,
+									"maxItems"	  : 3,
+									"required"	  : false,
+									"items"		  :
+									{
+										"description" : "The three maximum child values",
+										"type"	      : "number"
+									}
+								}
+							},
+							{
+								"id"		    : "numeric4.attribute.maya.adsk",
+								"description"	: "Construction information for numeric attribute type with four children (no ranges supported)",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "double4" ],
+									"defaultValue" :
+									{
+										"description" : "Default value for the attribute",
+										"type"		  : "array",
+										"minItems"	  : 4,
+										"maxItems"	  : 4,
+										"required"	  : false,
+										"items"		  :
+										{
+											"description" : "The three default child values",
+											"type"	      : "number"
+										}
+									}
+								}
+							},
+							{
+								"id"		    : "compound.attribute.maya.adsk",
+								"description"	: "Construction information for compound attribute type",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "compound" ]
+								},
+								"children" :
+								{
+									"description" : "List of all child attributes (only valid for type=compound",
+									"type"        : "array",
+									"minItems"    : 1,
+									"required"    : false,
+									"items"       :
+									{
+										"$ref" : "shared.attribute.maya.adsk"
+									}
+								}
+							},
+							{
+								"id"		    : "string.attribute.maya.adsk",
+								"description"	: "Construction information for string attribute type",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "string" ]
+								},
+								"defaultValue" :
+								{
+									"description" : "Default value for the attribute",
+									"type"		  : "string",
+									"required"	  : false
+								}
+							},
+							{
+								"id"		    : "matrix.attribute.maya.adsk",
+								"description"	: "Construction information for matrix attribute type",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "floatMatrix", "doubleMatrix" ]
+								},
+								"defaultValue" :
+								{
+									"description" : "Default value for the attribute",
+									"type"		  : "array",
+									"minItems"	  : 16,
+									"maxItems"	  : 16,
+									"required"	  : false,
+									"items"		  :
+									{
+										"description" : "Matrix element in row-major order [0,0], [0,1], [0,2], [0,3], [1,0], ...",
+										"type"	      : "number"
+									}
+								}
+							},
+							{
+								"id"		    : "message.attribute.maya.adsk",
+								"description"	: "Construction information for message attribute type",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "message" ]
+								}
+							},
+							{
+								"id"		    : "lightdata.attribute.maya.adsk",
+								"description"	: "Construction information for lightData attribute type",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "lightData" ]
+								},
+								"direction" :
+								{
+									"description" : "Name and optional default value for direction attribute",
+									"required"	  : true,
+									"properties"  :
+									{
+										"name"    :
+										{
+											"description" : "direction sub-attribute name",
+											"type"		  : "string",
+											"required"	  : true
+										},
+										"shortName"    :
+										{
+											"description" : "direction sub-attribute short name",
+											"type"		  : "string",
+											"required"	  : false
+										},
+										"defaultValue" :
+										{
+											"description" : "direction sub-attribute optional default value",
+											"type"		  : "array",
+											"required"	  : false,
+											"minItems"	  : 3,
+											"maxItems"	  : 3,
+											"items"		  :
+											{
+												"description"	: "direction default x/y/z",
+												"type"			: "number"
+											}
+										}
+									}
+								},
+								"intensity" :
+								{
+									"description" : "Name and optional default value for intensity attribute",
+									"required"	  : true,
+									"properties"  :
+									{
+										"name"    :
+										{
+											"description" : "intensity sub-attribute name",
+											"type"		  : "string",
+											"required"	  : true
+										},
+										"shortName"    :
+										{
+											"description" : "intensity sub-attribute short name",
+											"type"		  : "string",
+											"required"	  : false
+										},
+										"defaultValue" :
+										{
+											"description" : "intensity sub-attribute optional default value",
+											"type"		  : "array",
+											"required"	  : false,
+											"minItems"	  : 3,
+											"maxItems"	  : 3,
+											"items"		  :
+											{
+												"description"	: "intensity default red/green/blue",
+												"type"			: "number"
+											}
+										}
+									}
+								},
+								"ambient" :
+								{
+									"description" : "Name and optional default value for ambient attribute",
+									"required"	  : true,
+									"properties"  :
+									{
+										"name"    :
+										{
+											"description" : "ambient sub-attribute name",
+											"type"		  : "string",
+											"required"	  : true
+										},
+										"shortName"    :
+										{
+											"description" : "ambient sub-attribute short name",
+											"type"		  : "string",
+											"required"	  : false
+										},
+										"defaultValue" :
+										{
+											"description" : "ambient sub-attribute optional default value",
+											"type"		  : "boolean",
+											"required"	  : false
+										}
+									}
+								},
+								"diffuse" :
+								{
+									"description" : "Name and optional default value for diffuse attribute",
+									"required"	  : true,
+									"properties"  :
+									{
+										"name"    :
+										{
+											"description" : "diffuse sub-attribute name",
+											"type"		  : "string",
+											"required"	  : true
+										},
+										"shortName"    :
+										{
+											"description" : "diffuse sub-attribute short name",
+											"type"		  : "string",
+											"required"	  : false
+										},
+										"defaultValue" :
+										{
+											"description" : "diffuse sub-attribute optional default value",
+											"type"		  : "boolean",
+											"required"	  : false
+										}
+									}
+								},
+								"specular" :
+								{
+									"description" : "Name and optional default value for specular attribute",
+									"required"	  : true,
+									"properties"  :
+									{
+										"name"    :
+										{
+											"description" : "specular sub-attribute name",
+											"type"		  : "string",
+											"required"	  : true
+										},
+										"shortName"    :
+										{
+											"description" : "specular sub-attribute short name",
+											"type"		  : "string",
+											"required"	  : false
+										},
+										"defaultValue" :
+										{
+											"description" : "specular sub-attribute optional default value",
+											"type"		  : "boolean",
+											"required"	  : false
+										}
+									}
+								},
+								"shadowFraction" :
+								{
+									"description" : "Name and optional default value for shadowFraction attribute",
+									"required"	  : true,
+									"properties"  :
+									{
+										"name"    :
+										{
+											"description" : "shadow sub-attribute name",
+											"type"		  : "string",
+											"required"	  : true
+										},
+										"shortName"    :
+										{
+											"description" : "shadow sub-attribute short name",
+											"type"		  : "string",
+											"required"	  : false
+										},
+										"defaultValue" :
+										{
+											"description" : "shadow sub-attribute optional default value",
+											"type"		  : "number",
+											"required"	  : false
+										}
+									}
+								},
+								"preShadowIntensity" :
+								{
+									"description" : "Name and optional default value for preShadowIntensity attribute",
+									"required"	  : true,
+									"properties"  :
+									{
+										"name"    :
+										{
+											"description" : "preShadowIntensity sub-attribute name",
+											"type"		  : "string",
+											"required"	  : true
+										},
+										"shortName"    :
+										{
+											"description" : "preShadowIntensity sub-attribute short name",
+											"type"		  : "string",
+											"required"	  : false
+										},
+										"defaultValue" :
+										{
+											"description" : "preShadowIntensity sub-attribute optional default value",
+											"type"		  : "number",
+											"required"	  : false
+										}
+									}
+								}
+							},
+							{
+								"id"		    : "typed.attribute.maya.adsk",
+								"description"	: "Construction information for typed attribute",
+								"attributeType" :
+								{
+									"description" : "Type of attribute to be constructed",
+									"type"		  : "string",
+									"required"	  : true,
+									"enum"		  : [ "typed" ]
+								},
+								"acceptedTypes" :
+								{
+									"description" : "List of types that attribute can handle. The exact attribute type constructed will the most efficient one that can handle the type(s).",
+									"type"        : "array",
+									"minItems"    : 1,
+									"required"    : false,
+									"items"       :
+									{
+										"description"	: "Data type the attribute can accept",
+										"type"			: "string",
+										"enum"			: [ "numeric",
+															"pluginGeometry",
+															"string",
+															"matrix",
+															"stringArray",
+															"doubleArray",
+															"intArray",
+															"pointArray",
+															"vectorArray",
+															"componentList",
+															"mesh",
+															"lattice",
+															"nurbsCurve",
+															"nurbsSurface",
+															"sphere",
+															"dynArrayAttrs",
+															"dynSweptGeometry",
+															"subdSurface",
+															"nObject",
+															"nId",
+															"any" ]
+									}
+								},
+								"acceptedNumericTypes" :
+								{
+									"description" : "List of specific numeric data types that attribute can handle by name.",
+									"type"        : "array",
+									"minItems"    : 1,
+									"required"    : false,
+									"items"       :
+									{
+										"description"	: "Numeric type the attribute can accept",
+										"type"			: "string",
+										"enum"			: [ "byte", "char", "short", "short2", "short3",
+														    "long", "long2", "long3", "int", "int2", "int3",
+														    "float", "float2", "float3",
+														    "double", "double2", "double3", "double4",
+														    "addr", "angle", "distance", "time" ]
+									}
+								},
+								"acceptedPluginTypes" :
+								{
+									"description" : "List of plugin data types that attribute can handle by name.",
+									"type"        : "array",
+									"minItems"    : 1,
+									"required"    : false,
+									"items"       :
+									{
+										"description"	: "Numeric ID of plugin data type the attribute can accept",
+										"type"			: "number"
+									}
+								}
+							}
+						]
+					}
+				}
+			}
+		}
+	} ]
+}

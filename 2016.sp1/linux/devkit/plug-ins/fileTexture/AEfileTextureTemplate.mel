@@ -1,0 +1,35 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ===========================================================================
+//
+// agreement provided at the time of installation or download, or which
+// ===========================================================================
+//+
+
+global proc AEfileTextureTemplate(string $nodeName)
+{
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	editorTemplate -beginLayout "File Texture Node Attributes" -collapse 0;
+		editorTemplate -addControl "fileName";
+	editorTemplate -endLayout;
+
+	editorTemplate -beginLayout "UV Coordinates" -collapse 1;
+		editorTemplate -addControl "uvCoord";
+	editorTemplate -endLayout;
+
+	// include/call base class/node attributes
+	AEdependNodeTemplate $nodeName;
+
+	editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}
+
+

@@ -1,0 +1,79 @@
+//-
+// ==========================================================================
+// Copyright 2014 Autodesk, Inc. All rights reserved.
+//
+// Use of this software is subject to the terms of the Autodesk
+// license agreement provided at the time of installation or download,
+// or which otherwise accompanies this software in either electronic
+// or hard copy form.
+// ==========================================================================
+//+
+
+//  Description:	defines behaviour and layout of grabUVContext
+//					tool property sheet
+//
+
+
+global proc grabUVProperties ()
+//
+//	Procedure Name:
+//		grabUVProperties
+//
+//	Description:
+//		layout of tool property sheet
+//
+//	Input Arguments:
+//		None.
+//
+//	Return Value:
+//		None.
+//
+{
+	string	$currContext = `currentCtx`;
+	string	$currTool	 = `contextInfo -c $currContext`;
+	
+	setUITemplate -pushTemplate DefaultTemplate;
+
+	string $parent = `toolPropertyWindow -q -location`;
+    setParent $parent;
+
+	columnLayout -adj true grabUV;
+	
+		frameLayout -label "Brush" 
+			-labelVisible true 
+#ifndef MAYA_WANT_FLAT_UI
+			-borderStyle "out" 
+#endif
+			-collapsable false;
+
+		rowLayout -numberOfColumns 2 -columnWidth 2 20 -adjustableColumn 1 -rowAttach 2 "top" 0;
+		columnLayout -adjustableColumn true;
+
+		floatSliderGrp -field true -pre 3
+			-min 0
+			-max 1
+			-fieldMaxValue 10000
+				-label "Size:"
+			-cc ( ("grabUVContext -e -size #1 " + $currContext) )
+				grabUVFalloffSize_FSG;
+
+		setParent ..;
+		
+	setParent ..; // grabUV
+
+	columnLayout -adj true GrabMod;
+		frameLayout -collapsable true -collapse false
+			-label "Falloff" ;
+			columnLayout -adjustableColumn true;
+
+				rowLayout -nc 2;	
+					text "Falloff curve:";	
+					falloffCurve grabFalloffCurve;
+				setParent ..;
+
+			setParent ..;
+		setParent ..;
+	setParent ..;//Falloff curve	
+
+	setUITemplate -popTemplate;
+}

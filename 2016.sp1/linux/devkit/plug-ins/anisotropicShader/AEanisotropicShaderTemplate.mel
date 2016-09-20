@@ -1,0 +1,43 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+global proc AEanisotropicShaderTemplate( string $nodeName )
+{
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	editorTemplate -beginLayout "Common Material Attributes" -collapse 0;
+		editorTemplate -addControl "color";
+		editorTemplate -addControl "transparency";
+		editorTemplate -addControl "diffuseReflectivity";
+	editorTemplate -endLayout;
+
+	editorTemplate -beginLayout "Specular Shading" -collapse 0;
+		editorTemplate -addControl "specularColor";
+		editorTemplate -addControl "specularCoeff";
+		editorTemplate -addControl "roughness1";
+		editorTemplate -addControl "roughness2";
+		editorTemplate -addControl "axesVector";
+	editorTemplate -endLayout;
+
+	editorTemplate -suppress "matrixObjectToWorld";
+	editorTemplate -suppress "matrixWorldToEye";
+
+	// include/call base class/node attributes
+	AEdependNodeTemplate $nodeName;
+	
+	editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}
+
+

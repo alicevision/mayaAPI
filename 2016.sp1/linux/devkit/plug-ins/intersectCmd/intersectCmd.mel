@@ -1,0 +1,29 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+//	Use the following script to automatically display intersections on the mesh (assuming 
+//	a spotlight and a mesh with the names used here exist):
+
+global proc intersectExample()
+{
+	intersectCmd spotLight1 pPlane1;
+	select -r spotLight1;
+}
+
+scriptJob -ac "spotLight1.tx" intersectExample;
+scriptJob -ac "spotLight1.ty" intersectExample;
+scriptJob -ac "spotLight1.tz" intersectExample;
+
+scriptJob -ac "spotLight1.rx" intersectExample;
+scriptJob -ac "spotLight1.ry" intersectExample;
+scriptJob -ac "spotLight1.rz" intersectExample;

@@ -1,0 +1,2871 @@
+// ****************************************************************************
+//
+// Copyright 2014 Autodesk, Inc. All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+// *       Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+// *       Redistributions in binary form must reproduce the above
+// copyright notice, this list of conditions and the following disclaimer
+// in the documentation and/or other materials provided with the
+// distribution.
+// *       Neither the name of Sony Pictures Imageworks, nor
+// Industrial Light & Magic, nor the names of their contributors may be used
+// to endorse or promote products derived from this software without specific
+// prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// ****************************************************************************
+
+//
+//  Description:
+//      This script performs the AlembicExportAll and
+//      AlembicExportSelection commands.
+//
+
+//
+// Global Variables
+//
+// Modes of each cache time range in General Options UI
+global int   $gTmpCacheTimeRangeModes[];
+// Low sample frames of each cache time range in General Options UI
+global float $gTmpSampleLowFrames[];
+// High sample frames of each cache time range in General Options UI
+global float $gTmpSampleHighFrames[];
+// Flag that if we can edit the time range in scriptTable. When we are updating
+// the time range in General Option UI, it should be allowed.
+global int $gAllowEditTimeRangeInTable;
+// Flag that if the overlapping warning dialog will pop up.
+// Three states:
+//    -1 - the dialog should pop up;
+//     0 - the dialog should not pop up; and abort the operation (behavior 
+//         of "Review Ranges" button)
+//     1 - the dialog should not pop up; and auto-resolve the overlapping (behavior 
+//         of "Continue" button)
+global int $gAlembicShowRangeAdjustDialog = -1;
+
+//
+//  Procedure Name:
+//      setOptionVars
+//
+//  Description:
+//      Initialize the option values.
+//
+//  Input Arguments:
+//      Whether to set the options to default values.
+//
+//  Return Value:
+//      None.
+proc setOptionVars(int $forceFactorySettings)
+{
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportCacheTimeRanges`) {
+        optionVar -clearArray Alembic_exportCacheTimeRanges;
+        optionVar -intValueAppend Alembic_exportCacheTimeRanges 2;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportStarts`) {
+        optionVar -clearArray Alembic_exportStarts;
+        optionVar -floatValueAppend Alembic_exportStarts 1;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportEnds`) {
+        optionVar -clearArray Alembic_exportEnds;
+        optionVar -floatValueAppend Alembic_exportEnds 24;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportEvaluateEverys`) {
+        optionVar -clearArray Alembic_exportEvaluateEverys;
+        optionVar -floatValueAppend Alembic_exportEvaluateEverys 1;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportEnableFrameRelativeSamples`) {
+        optionVar -clearArray Alembic_exportEnableFrameRelativeSamples;
+        optionVar -intValueAppend Alembic_exportEnableFrameRelativeSamples 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportLowFrameRelativeSamples`) {
+        optionVar -clearArray Alembic_exportLowFrameRelativeSamples;
+        optionVar -floatValueAppend Alembic_exportLowFrameRelativeSamples -0.2;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportHighFrameRelativeSamples`) {
+        optionVar -clearArray Alembic_exportHighFrameRelativeSamples;
+        optionVar -floatValueAppend Alembic_exportHighFrameRelativeSamples 0.2;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportEnablePreRoll`) {
+        optionVar -intValue Alembic_exportEnablePreRoll 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportPreRollStartFrame`) {
+        optionVar -floatValue Alembic_exportPreRollStartFrame 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportAttr`) {
+        optionVar -stringValue Alembic_exportAttr "";
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportAttrPrefix`) {
+        optionVar -stringValue Alembic_exportAttrPrefix "";
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportVerbose`) {
+        optionVar -intValue Alembic_exportVerbose 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportNoNormals`) {
+        optionVar -intValue Alembic_exportNoNormals 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportRenderableOnly`) {
+        optionVar -intValue Alembic_exportRenderableOnly 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportStripNamespaces`) {
+        optionVar -intValue Alembic_exportStripNamespaces 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportUVWrite`) {
+        optionVar -intValue Alembic_exportUVWrite 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportWholeFrameGeo`) {
+        optionVar -intValue Alembic_exportWholeFrameGeo 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportWorldSpace`) {
+        optionVar -intValue Alembic_exportWorldSpace 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportWriteVisibility`) {
+        optionVar -intValue Alembic_exportWriteVisibility 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportPerFrameCallbackMel`) {
+        optionVar -stringValue Alembic_exportPerFrameCallbackMel "";
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportPostJobCallbackMel`) {
+        optionVar -stringValue Alembic_exportPostJobCallbackMel "";
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportPerFrameCallbackPython`) {
+        optionVar -stringValue Alembic_exportPerFrameCallbackPython "";
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportPostJobCallbackPython`) {
+        optionVar -stringValue Alembic_exportPostJobCallbackPython "";
+    }
+
+    // version 2
+    //
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportFilterEulerRotations`) {
+        optionVar -intValue Alembic_exportFilterEulerRotations 0;
+    }
+
+    // version 3
+    //
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportWriteColorSets`) {
+        optionVar -intValue Alembic_exportWriteColorSets 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportWriteFaceSets`) {
+        optionVar -intValue Alembic_exportWriteFaceSets 0;
+    }
+
+    // version 4
+    //
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportDataFormat`) {
+        optionVar -intValue Alembic_exportDataFormat 2;
+    }
+
+    // version 5
+    //
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportPreRollStep`) {
+        optionVar -floatValue Alembic_exportPreRollStep 1;
+    }
+
+    //version 6
+    //
+    if ($forceFactorySettings || !`optionVar -exists Alembic_exportWriteCreases`) {
+        optionVar -intValue Alembic_exportWriteCreases 0;
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_getActiveTimeRange
+//
+//  Description:
+//      Get active time range according to the selected row of time ranges table
+//
+//  Return Value:
+//      Row number of active time range in the table.
+//
+proc int Alembic_getActiveTimeRange()
+{
+    int $rows[] = `scriptTable -query -selectedRows cacheTimeTable`;
+    
+    // no row selected, this should be an error
+    if (size($rows) == 0)
+        return 1;
+
+    // there should be only one row selected
+    if ($rows[0] == 1) {
+        if(`checkBoxGrp -q -value1 enablePreRoll`) {
+            $rows[0] = 2;
+        }
+    }
+    
+    return $rows[0];
+}
+
+//
+//  Procedure Name:
+//      Alembic_getActiveTimeRangeIndex
+//
+//  Description:
+//      Get the index of active time range according to the selected row of time ranges table
+//
+//  Return Value:
+//      Index of active time range in the table.
+//
+proc int Alembic_getActiveTimeRangeIndex()
+{
+    int $rows[] = `scriptTable -query -selectedRows cacheTimeTable`;
+    
+    // no row selected, this should be an error
+    if (size($rows) == 0)
+        return 0;
+    
+    int $index = $rows[0] - 1;
+    if ($index > 0 && `checkBoxGrp -q -value1 enablePreRoll`) {
+        $index--;
+    }
+    
+    return $index;
+}
+
+//
+//  Procedure Name:
+//      Alembic_getStartEndFramesOfRange
+//
+//  Description:
+//      Get the start and end frame of the specified range by parsing
+//      the string in scriptTable.
+//
+//  Input Arguments:
+//      row    - Row number in the cache time range table.
+//
+//  Return Value:
+//      The start and end frame of the specified range.
+//
+proc float[] Alembic_getStartEndFramesOfRange(int $row)
+{
+    string $cacheTime[] = `scriptTable -q -cellIndex $row 1 -cellValue cacheTimeTable`;
+    string $frames[] = stringToStringArray($cacheTime[0], "-");
+    float $result[];
+    $result[0] = (float)$frames[0];
+    $result[1] = (float)$frames[1];
+    // frames may be negative, for example, the string may be:
+    // "-20--5", "-20-5", "5-20"
+    if (startsWith($cacheTime[0], "-")) {
+        $result[0] = -$result[0];
+        
+        if (gmatch($cacheTime[0], "*--*")) {
+            $result[1] = -$result[1];
+        }
+    }
+
+    return $result;
+}
+
+//
+//  Procedure Name:
+//      Alembic_getEvaluateEveryOfRange
+//
+//  Description:
+//      Get evaluate step of the the specified range by parsing
+//      the string in scriptTable.
+//
+//  Input Arguments:
+//      row    - Row number in the cache time range table.
+//
+//  Return Value:
+//      The evaluate step of the the specified range.
+//
+proc float Alembic_getEvaluateEveryOfRange(int $row)
+{
+    string $step[] = `scriptTable -q -cellIndex $row 3 -cellValue cacheTimeTable`;
+    return $step[0];
+}
+
+//
+//  Procedure Name:
+//      Alembic_getSampleEnabledOfRange
+//
+//  Description:
+//      Get sample enable state of the the specified range by parsing
+//      the string in scriptTable.
+//
+//  Input Arguments:
+//      row    - Row number in the cache time range table.
+//
+//  Return Value:
+//      The sample enable state of the the specified range.
+//
+proc int Alembic_getSampleEnabledOfRange(int $row)
+{
+    string $subSamples[] = `scriptTable -q -cellIndex $row 4 -cellValue cacheTimeTable`;
+    return ($subSamples[0] != "0");
+}
+
+proc string Alembic_getYesLabel()
+{
+    return "         " + (uiRes("m_performAlembicExport.kYes"));
+}
+
+proc int isDigital(string $value)
+{
+    int $isNum = 1;
+    string $v = strip($value);
+    string $res = match("^[\\-]*[1-9][0-9]*$", $v);  // integer
+    if (size($res) == 0) {
+        $res = match("^[\\-]*[1-9][0-9]*\\.[0-9]*$", $v); // float
+        if (size($res) == 0) {
+            $res = match("^[\\-]*0\\.[0-9]*$", $v);
+            if (size($res) == 0) {
+                $res = match("^\\.[0-9]*$", $v);
+                if (size($res) == 0) {
+                    $isNum = ($v == "0");
+                }
+            }
+        }
+    }
+
+    if ($isNum == 1) {
+        $res = match("^\\-\\-", $v);
+        if (size($res) > 0) {
+            $isNum = 0;
+        }
+    }
+
+    if ($isNum == 0) {
+        warning (uiRes("m_performAlembicExport.kInvalidDigit"));
+    }
+    return $isNum;
+}
+
+//
+//  Procedure Name:
+//      Alembic_cacheTimeCellChanged
+//
+//  Description:
+//      Callback when the value of a cell is changed.
+//
+//  Return Value:
+//      An integer value which indicates whether that value 
+//      should be accepted (return 1 if yes, and 0 if no).
+//
+global proc int Alembic_cacheTimeCellChanged(int $row, int $column, string $value)
+{
+    global int   $gTmpCacheTimeRangeModes[];
+    global float $gTmpSampleLowFrames[];
+    global float $gTmpSampleHighFrames[];
+    global int $gAllowEditTimeRangeInTable;
+
+    int $rows[] = `scriptTable -query -selectedRows cacheTimeTable`;
+    // no row selected, this should be in initial state
+    // so allow edit and don't update UI in "General Options"
+    if (size($rows) == 0)
+        return 1;
+
+    int $prerollEnabled = `checkBoxGrp -q -value1 enablePreRoll`;
+
+    switch ($column) {
+    case 1: 
+        // "Cache Time" column
+        int $totalRows = `scriptTable -q -rows cacheTimeTable`;
+        if ($totalRows - 1 == $row) { // last row is "Add Range+"
+            return 1;
+        }
+        
+        if ($row != 1 || !$prerollEnabled){
+            int $rangeIndex = Alembic_getActiveTimeRangeIndex();
+            if ($gTmpCacheTimeRangeModes[$rangeIndex] != 3 && $gAllowEditTimeRangeInTable == 0) {
+                warning (uiRes("m_performAlembicExport.kNotEditableTimeRange"));
+                return 0;
+            }
+        }
+
+        $value = strip($value);
+        string $res = match("^[\\-]*[0-9\\.]+\\-[-]*[0-9\\.]+$", $value);
+        if (size($res) == 0) {
+            warning (uiRes("m_performAlembicExport.kIllegalFormat"));
+            return 0;
+        }
+        string $frames[] = stringToStringArray($value, "-");
+        float $start = $frames[0];
+        float $end = $frames[1];
+        if (startsWith($value, "-")) {
+            $start = -$start;
+        }
+        if (match("--", $value) == "--") {
+            $end = -$end;
+        }
+        if ($row == 1 && $prerollEnabled){
+            floatFieldGrp -e -value1 $start preRollStartFrame;
+        }
+        else {
+            floatFieldGrp -e -value1 $start -value2 $end startEnd;
+        }
+
+        return 1;
+        break;
+    case 2:
+        // "Pre Roll" column cann't be editable
+        if ($row == 1 && $prerollEnabled)
+        {
+            if ( $value == Alembic_getYesLabel()) {
+                return 1;
+            }
+        }
+
+        warning (uiRes("m_performAlembicExport.kNotEditablePreroll"));
+        return 0;
+        break;
+    case 3:   // "Step" column
+        $value = strip($value);
+        if (isDigital($value)) {
+            float $step = $value;
+            if ($step <= 0) {
+                warning (uiRes("m_performAlembicExport.kInvalidStep"));
+                return 0;
+            }
+            if ($row == 1 && $prerollEnabled) {
+                floatFieldGrp -e -value1 $step preRollStep;
+            }
+            else {
+                floatFieldGrp -e -value1 $step evaluateEvery;
+            }
+
+            return 1;
+        }
+
+        return 0;
+        break;
+    case 4:   // "Subsamples" column
+        if ($row == 1 && $prerollEnabled) {
+            warning (uiRes("m_performAlembicExport.kNotEditableSample"));
+            return 0;
+        }
+        string $samples[] = stringToStringArray($value, ";");
+        if (size($samples) == 1 && $samples[0] == "0") {
+            checkBoxGrp -e -value1 0 enableFrameRelativeSample;
+            floatFieldGrp -e -enable 0   lowFrameRelativeSample;
+            floatFieldGrp -e -enable 0  highFrameRelativeSample;
+            return 1;
+        }
+
+        if (size($samples) != 2 &&  size($samples) != 3) {
+            warning (uiRes("m_performAlembicExport.kIncorrectSample"));
+            return 0;
+        }
+
+        if (!isDigital($samples[0]) || !isDigital($samples[size($samples)-1])) {
+            return 0;
+        }
+        
+        if (size($samples) == 3 && strip($samples[1]) != "0") {
+            warning (uiRes("m_performAlembicExport.kInvalidMiddleSample"));
+            return 0;
+        }
+
+        int $rangeIndex = Alembic_getActiveTimeRangeIndex();
+        $gTmpSampleLowFrames[$rangeIndex] = $samples[0];
+        $gTmpSampleHighFrames[$rangeIndex] = $samples[size($samples)-1];
+        floatFieldGrp -e -enable 1 -value1 $gTmpSampleLowFrames[$rangeIndex]   lowFrameRelativeSample;
+        floatFieldGrp -e -enable 1 -value1 $gTmpSampleHighFrames[$rangeIndex]  highFrameRelativeSample;
+        checkBoxGrp -e -value1 1 enableFrameRelativeSample;
+
+        return 1;
+
+        break;
+    }
+
+    return 0;
+}
+
+//
+//  Procedure Name:
+//      Alembic_getPrerollEndFrame
+//
+//  Description:
+//      Calculate the end frame of preroll.
+//
+//  Input Arguments:
+//      startFrame      - Start frame of preroll.
+//      cacheStartFrame - Start frame of first cache time range.
+//      prerollStep     - Step of preroll.
+//
+//  Return Value:
+//      The end frame of preroll.
+//
+global proc float Alembic_getPrerollEndFrame(float $startFrame, float $cacheStartFrame, float $prerollStep)
+{
+    float $preRollEndFrame = $startFrame;
+    while (($preRollEndFrame + $prerollStep) < $cacheStartFrame) {
+        $preRollEndFrame += $prerollStep;
+    }
+
+    return $preRollEndFrame;
+}
+
+//
+//  Procedure Name:
+//      Alembic_updateGlobalVariables
+//
+//  Description:
+//      Update global arrays when some rows are removed.
+//      After update, the array size is not shriked. Some elements in the end are invalid now.
+//
+//  Input Arguments:
+//      startIndex     - Index of the first cache time range that is removed.
+//      removedCount   - Count of cache time range that is removed.
+//
+//  Return Value:
+//      None.
+//
+proc Alembic_updateGlobalVariables(int $startIndex, int $removedCount)
+{
+    global int   $gTmpCacheTimeRangeModes[];
+    global float $gTmpSampleLowFrames[];
+    global float $gTmpSampleHighFrames[];
+
+    for ($i = $startIndex; $i < size($gTmpCacheTimeRangeModes)-$removedCount; $i++) {
+        $gTmpCacheTimeRangeModes[$i] = $gTmpCacheTimeRangeModes[$i+$removedCount];
+        $gTmpSampleLowFrames[$i] = $gTmpSampleLowFrames[$i+$removedCount];
+        $gTmpSampleHighFrames[$i] = $gTmpSampleHighFrames[$i+$removedCount];
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_adjustFrameRanges
+//
+//  Description:
+//      All time ranges are sorted according to their start/end frames.
+//      When start or end frame of one time range is changed, check and 
+//      change other time ranges that overlap with it.
+//
+//  Input Arguments:
+//      rangeIndex   - Index of cache time range changed.
+//      startFrame   - Start frame of the cache time range.
+//      endFrame     - End frame of the cache time range.
+//      dryRun       - if true, don't update the overlapping time ranges.
+//
+//  Return Value:
+//      If dryRun is true, return 1 if there is overlapping, otherwise return 0.
+//      If dryRun is false, return the new index for the cache time range.
+//
+proc int Alembic_adjustFrameRanges(int $rangeIndex, float $startFrame, float $endFrame, int $dryRun)
+{
+    global int $gTmpCacheTimeRangeModes[];
+    global int $gAllowEditTimeRangeInTable;
+
+    $gAllowEditTimeRangeInTable = 1;
+
+    int $isOverlapping = 0;
+    int $lastRowToRemoved = -1;
+    int $prerollEnabled = `checkBoxGrp -q -value1 enablePreRoll`;
+
+    int $ri;
+    int $totalRows = `scriptTable -q -rows cacheTimeTable`;
+    // check time ranges that are after the range
+    //
+    for ($ri = $rangeIndex+$prerollEnabled+2; $ri < $totalRows-1; $ri++) {
+        float $frames[] = Alembic_getStartEndFramesOfRange($ri);
+        if ( $frames[1] <= $endFrame ) {
+            if ($dryRun) {
+                return 1;
+            }
+            $lastRowToRemoved = $ri;
+        }
+        else {
+            if ($frames[0] <= $endFrame ) {
+                float $step = Alembic_getEvaluateEveryOfRange($ri);
+                float $newStartFrame = $frames[1];
+                while ($newStartFrame - $step > $endFrame) {
+                    $newStartFrame -= $step;
+                }
+                if (!$dryRun) {
+                    $isOverlapping = 1;
+                    string $newTimeRange = "" + $newStartFrame + "-" + $frames[1];
+                    scriptTable -edit -cellIndex $ri 1 -cellValue $newTimeRange cacheTimeTable;
+                    // change the range mode to start/end
+                    $gTmpCacheTimeRangeModes[$ri-$prerollEnabled-1] = 3;
+                }
+                else {
+                    return 1;
+                }
+            }
+
+            break;
+        }
+    }
+
+    int $removedRowCount;
+    if (!$dryRun && $lastRowToRemoved > 0) { // remove overlapping rows
+        $isOverlapping = 1;
+        for ($ri = $lastRowToRemoved; $ri > $rangeIndex+$prerollEnabled+1; $ri--) {
+            scriptTable -edit -deleteRow $ri cacheTimeTable;
+        }
+        $removedRowCount = $lastRowToRemoved - ($rangeIndex+$prerollEnabled+1);
+        Alembic_updateGlobalVariables($rangeIndex+1, $removedRowCount);
+    }
+
+    // check time ranges that are before the range
+    //
+    if ($rangeIndex > 0) {
+        $removedRowCount = 0;
+        for ($ri = $rangeIndex+$prerollEnabled; $ri > $prerollEnabled; $ri--) {
+            float $frames[] = Alembic_getStartEndFramesOfRange($ri);
+            if ( $frames[0] >= $startFrame ) {
+                if (!$dryRun) {
+                    $isOverlapping = 1;
+                    // remove overlapping row
+                    scriptTable -edit -deleteRow $ri cacheTimeTable;
+                    $removedRowCount++;
+                }
+                else {
+                    return 1;
+                }
+            }
+            else {
+                if ($frames[1] >= $startFrame ) {
+                    float $step = Alembic_getEvaluateEveryOfRange($ri);
+                    float $newEndFrame = $frames[0];
+                    while ($newEndFrame + $step < $startFrame) {
+                        $newEndFrame += $step;
+                    }
+                    if (!$dryRun) {
+                        $isOverlapping = 1;
+                        string $newTimeRange = "" + $frames[0] + "-" + $newEndFrame;
+                        scriptTable -edit -cellIndex $ri 1 -cellValue $newTimeRange cacheTimeTable;
+                        // change the range mode to start/end
+                        $gTmpCacheTimeRangeModes[$ri-$prerollEnabled-1] = 3;
+                    }
+                    else {
+                        return 1;
+                    }
+                }
+
+                break;
+            }
+        }
+
+        if ($removedRowCount > 0) {
+            $rangeIndex -= $removedRowCount;
+            Alembic_updateGlobalVariables($rangeIndex, $removedRowCount);
+        }
+    }
+
+    $gAllowEditTimeRangeInTable = 0;
+
+    if ($dryRun) { return 0; }
+    else {
+        if ($isOverlapping == 1) {
+            int $newRow = $rangeIndex + $prerollEnabled + 1;
+            scriptTable -edit -selectedRows $newRow cacheTimeTable;
+        }
+        return $rangeIndex; 
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_cacheTimeAfterCellChanged
+//
+//  Description:
+//      Callback after the value of a cell is changed.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_cacheTimeAfterCellChanged(int $row, int $column, string $value)
+{
+    // skip AddRange row
+    int $totalRows = `scriptTable -q -rows cacheTimeTable`;
+    if ($totalRows-1 == $row)
+        return;
+
+    // adjust overlapping time ranges
+    //
+    if ($column == 1) {
+        // skip preRoll row
+        int $preRollChecked = `checkBoxGrp -q -value1 enablePreRoll`;
+        if (!$preRollChecked || $row != 1) {
+            float $startEnd[] = Alembic_getStartEndFramesOfRange($row);
+            int $newRangeIndex = Alembic_adjustFrameRanges($row-1-$preRollChecked, $startEnd[0], $startEnd[1], 0);
+
+            // if this row is the first time range, adjust preroll
+            if ( $preRollChecked && $newRangeIndex == 0) {
+                float $preStartFrame = `floatFieldGrp -q -value1 preRollStartFrame`;
+                float $step = `floatFieldGrp -q -value1 preRollStep`;
+                float $preRollEndFrame = Alembic_getPrerollEndFrame($preStartFrame, $startEnd[0], $step);
+
+                string $preRollTimeRangeVal = "" + $preStartFrame + "-" + $preRollEndFrame;
+                scriptTable -edit -cellIndex 1 1 -cellValue $preRollTimeRangeVal cacheTimeTable;
+            }
+            // select the new row if it is not the same with old row
+            int $newRow = $newRangeIndex + 1 + $preRollChecked;
+            if ($newRow != $row) {
+                $row = $newRow;
+            }
+        }
+    }
+    
+    // convert digital number format, for example, from ".1" to "0.1"
+    //
+    $value = strip($value);
+    switch ($column) {
+        case 1:
+            string $frames[] = stringToStringArray($value, "-");
+            if (startsWith($frames[0], ".") || startsWith($frames[1], ".")) {
+                string $newStr;
+                if (startsWith($frames[0], "-")) {
+                    $newStr = "-";
+                }
+                if (startsWith($frames[0], ".")) {
+                    $newStr += "0";
+                }
+                $newStr += $frames[0];
+                $newStr += "-";
+                if (gmatch($frames[0], "*--*")) {
+                    $newStr += "-";
+                }
+                if (startsWith($frames[1], ".")) {
+                    $newStr += "0";
+                }
+                $newStr += $frames[1];
+                scriptTable -edit -cellIndex $row $column -cellValue $newStr cacheTimeTable;
+            }
+            break;
+        case 2:
+            break;
+        case 3:
+            if (startsWith($value, ".")) {
+                string $newStr = "0" + $value;
+                scriptTable -edit -cellIndex $row $column -cellValue $newStr cacheTimeTable;
+            }
+            break;
+        case 4:
+            string $samples[] = stringToStringArray($value, ";");
+            int $needToConvert = 0;
+            for ($i = 0; $i < size($samples); $i++) {
+                if (startsWith(strip($samples[$i]), ".")) {
+                    $needToConvert = 1;
+                }
+            }
+            if ($needToConvert) {
+                string $newStr;
+                for ($i = 0; $i < size($samples); $i++) {
+                    if (startsWith(strip($samples[$i]), ".")) {
+                        $newStr += "0";
+                    }
+                    $newStr += strip($samples[$i]);
+                    if ($i != size($samples)-1) {
+                        $newStr += "; ";
+                    }
+                }
+                scriptTable -edit -cellIndex $row $column -cellValue $newStr cacheTimeTable;
+            }
+            break;
+    }
+}
+
+global proc Alembic_createRangeDialogDismiss(int $noMore, string $status)
+{
+    global int $gAlembicShowRangeAdjustDialog;
+
+    if ($noMore!=0){
+        $gAlembicShowRangeAdjustDialog = $status;
+    }
+
+    if ($status)
+        layoutDialog -dismiss "continue";
+    else
+        layoutDialog -dismiss "dismiss";
+}
+
+global proc Alembic_createRangeAdjustedDialog()
+{
+    string $form = `setParent -q`;
+
+    formLayout -e  $form;
+    
+    string $text = (uiRes("m_performAlembicExport.kOverlappingWarning"));
+    string $contText = (uiRes("m_performAlembicExport.kContinue"));
+    string $reviewText = (uiRes("m_performAlembicExport.kReviewRanges"));
+    string $dontShowAgainText =  (uiRes("m_performAlembicExport.kNotShowAgain"));
+
+    string $dontShowAgainCheckBox = `checkBox -l $dontShowAgainText -v 0`;
+    string $textCtrl = `text -l $text`;
+    string $callbackCmd = "Alembic_createRangeDialogDismiss(eval(\"checkBox -q -value "+$dontShowAgainCheckBox+"\"), 1)";
+    string $contButton = `button -l $contText -c $callbackCmd`;
+    $callbackCmd = "Alembic_createRangeDialogDismiss(eval(\"checkBox -q -value "+$dontShowAgainCheckBox+"\"), 0)";
+    string $reviewButton = `button -l $reviewText -c $callbackCmd`;
+
+    checkBox -e $dontShowAgainCheckBox;
+
+    int $spacer = 5;
+    int $top = 10;
+    int $edge = 10;
+    int $bottom = 10;
+
+    formLayout -edit
+        -attachForm        $textCtrl               "top"       10
+        -attachForm        $textCtrl               "left"      10
+        -attachControl    $textCtrl                "bottom"    5     $contButton
+        -attachNone        $textCtrl               "right"    
+
+        -attachNone        $contButton             "top"
+        -attachForm        $contButton             "left"      10 
+        -attachForm        $contButton             "bottom"    10
+        -attachPosition    $contButton             "right"     5     20
+
+        -attachNone        $reviewButton           "top"
+        -attachControl     $reviewButton           "left"      5     $contButton
+        -attachForm        $reviewButton           "bottom"    10
+        -attachNone        $reviewButton           "right"
+        
+        -attachNone        $dontShowAgainCheckBox  "top"
+        -attachPosition    $dontShowAgainCheckBox  "left"      5     60
+        -attachForm        $dontShowAgainCheckBox  "bottom"    10
+        -attachPosition    $dontShowAgainCheckBox  "right"     5     80
+
+    $form;
+}
+
+
+//
+//  Procedure Name:
+//      Alembic_updateCacheTimeRangeRow
+//
+//  Description:
+//      Update the row of time range in table.
+//      In the callback of afterCellChangedCmd, if the new start/end frame is
+//      overlapping with other ranges, rows of other ranges will be updated or
+//      removed.
+//
+//  Input Arguments:
+//      row         - Row number of the active time range.
+//
+//  Return Value:
+//      None.
+//
+proc Alembic_updateCacheTimeRangeRow(int $row)
+{
+    global int $gAllowEditTimeRangeInTable;
+
+    float $startFrame = `floatFieldGrp -q -value1 startEnd`;
+    float $endFrame = `floatFieldGrp -q -value2 startEnd`;
+    
+    string $cacheTimeRangeVal = "" + $startFrame + "-" + $endFrame;
+    $gAllowEditTimeRangeInTable = 1;
+    scriptTable -edit -cellIndex $row 1 -cellValue $cacheTimeRangeVal cacheTimeTable;
+    $gAllowEditTimeRangeInTable = 0;
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportCacheTimeFramesChanged
+//
+//  Description:
+//      Callback procedure when the start/end frame has been changed.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box UI. Required so
+//                  that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportCacheTimeFramesChanged(string $parent)
+{
+    setParent $parent;
+    
+    int $row = Alembic_getActiveTimeRange();
+    int $newRangeIndex = Alembic_updateCacheTimeRangeRow($row);
+}
+
+//
+//  Procedure Name:
+//      Alembic_addNewCacheTimeRange
+//
+//  Description:
+//      Add a new time range after the last time range.
+//
+//  Return Value:
+//      None.
+//
+proc Alembic_addNewCacheTimeRange()
+{
+    global int $gAllowEditTimeRangeInTable;
+
+    global int   $gTmpCacheTimeRangeModes[];
+    global float $gTmpSampleLowFrames[];
+    global float $gTmpSampleHighFrames[];
+
+    int $rowNum = `scriptTable -q -rows cacheTimeTable`;
+    int $lastRow = $rowNum - 2;
+    $rowNum--;
+    scriptTable -edit -insertRow $rowNum cacheTimeTable;
+    
+    string $preTimeRangeVal[] = `scriptTable -q -cellValue -cellIndex $lastRow 1 cacheTimeTable`;
+    string $preTimes[] = stringToStringArray($preTimeRangeVal[0], "-");
+    float $startTime = (float)$preTimes[1] + 1;
+    float $endTime = $startTime + 1;
+    string $newTimeRange = "" + $startTime + "-" + $endTime;
+    $gAllowEditTimeRangeInTable = 1;
+    scriptTable -edit -cellIndex $rowNum 1 -cellValue $newTimeRange cacheTimeTable;
+    $gAllowEditTimeRangeInTable = 0;
+    scriptTable -edit -cellIndex $rowNum 3 -cellValue 1 cacheTimeTable;
+    scriptTable -edit -cellIndex $rowNum 4 -cellValue "0" cacheTimeTable;
+
+    int $rangeIndex = $rowNum-1;
+    if (`checkBoxGrp -q -value1 enablePreRoll`) {
+        $rangeIndex--;
+    }
+    $gTmpCacheTimeRangeModes[$rangeIndex] = 3;
+    $gTmpSampleLowFrames[$rangeIndex] = 0;
+    $gTmpSampleHighFrames[$rangeIndex] = 0;
+    
+    scriptTable -edit -selectedRows $rowNum cacheTimeTable;
+}
+
+global proc Alembic_cacheTimeRangeRemoved(int $rows[])
+{
+    global int   $gTmpCacheTimeRangeModes[];
+    global float $gTmpSampleLowFrames[];
+    global float $gTmpSampleHighFrames[];
+
+    // remove the data for this time range row
+    int $rangeIndex = $rows[0]-1;
+    if (`checkBoxGrp -q -value1 enablePreRoll`) {
+        $rangeIndex--;
+        if ($rangeIndex < 0) {
+            // the row of preroll is removed
+            checkBoxGrp -e -value1 0 enablePreRoll;
+            floatFieldGrp -e -enable 0 preRollStartFrame;
+            floatFieldGrp -e -enable 0 preRollStep;
+            
+            return;
+        }
+        if ($rangeIndex == 0) {
+            // update end frame of preroll
+            float $firstFrameRange[] = Alembic_getStartEndFramesOfRange(2); 
+            float $startFrame = `floatFieldGrp -q -value1 preRollStartFrame`;
+            float $step = `floatFieldGrp -q -value1 preRollStep`;
+            float $preRollEndFrame = Alembic_getPrerollEndFrame($startFrame, $firstFrameRange[0], $step);
+
+            string $preRollTimeRangeVal = "" + $startFrame + "-" + $preRollEndFrame;
+            scriptTable -edit -cellIndex 1 1 -cellValue $preRollTimeRangeVal cacheTimeTable;
+        }
+    }
+    Alembic_updateGlobalVariables($rangeIndex, 1);
+    
+    int $totalRows = `scriptTable -q -rows cacheTimeTable`;
+    if ( $rows[0] == $totalRows-1 ) {
+        // last time range is removed, select the first time range
+        scriptTable -edit -selectedRows 1 cacheTimeTable;
+    }
+    else {
+        scriptTable -edit -selectedRows $rows[0] cacheTimeTable;
+    }
+}
+
+global proc int Alembic_cacheTimeRangeToBeRemoved(int $rows[])
+{
+    // only one row can be selected
+    // the last row ("Add Range+) cannot be selected staticly, so
+    // don't need to care it here.
+    if ($rows[0] <= 2) {
+        int $preRollEnabled = `checkBoxGrp -q -value1 enablePreRoll`;
+        int $totalRows = `scriptTable -q -rows cacheTimeTable`;
+        if ($totalRows-$preRollEnabled == 3 && $rows[0]-$preRollEnabled == 1) {
+            // only one time range in the table, which cannot be deleted
+            warning (uiRes("m_performAlembicExport.kNoDeleteRange"));
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+proc Alembic_setRangeModeUI(int $mode)
+{
+    switch ($mode) {
+        case 4:
+                radioButtonGrp -e -select 1 rangeCurrentFrame;
+                break;
+        case 1:
+                radioButtonGrp -e -select 1 rangeRenderSettings;
+                break;
+        case 2:
+                radioButtonGrp -e -select 1 rangeTimeSlider;
+                break;
+        case 3:
+                radioButtonGrp -e -select 1 rangeStartEnd;
+                break;
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_cacheTimeSelectionChanged
+//
+//  Description:
+//      Callback when selected row of time range table is changed.
+//      When the last row is selected (clicked), add a new time range.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_cacheTimeSelectionChanged()
+{
+    global int   $gTmpCacheTimeRangeModes[];
+    global float $gTmpSampleLowFrames[];
+    global float $gTmpSampleHighFrames[];
+
+    int $selectedRow = Alembic_getActiveTimeRange();
+    
+    // if last row is selected, add a new range
+    int $rowNum = `scriptTable -q -rows cacheTimeTable`;
+    if ($rowNum-1 == $selectedRow) {
+        Alembic_addNewCacheTimeRange();
+        return;
+    }
+
+    // update Generic Options to current selected row
+    //
+    int $rangeIndex = Alembic_getActiveTimeRangeIndex();
+    Alembic_setRangeModeUI($gTmpCacheTimeRangeModes[$rangeIndex]);
+
+    // setup start/end float fields
+    //
+    int $startEndEnabled = ($gTmpCacheTimeRangeModes[$rangeIndex] == 3);
+    floatFieldGrp -e -enable $startEndEnabled startEnd;
+    float $startEnd[] = Alembic_getStartEndFramesOfRange($selectedRow);
+    floatFieldGrp -e -value1 $startEnd[0] -value2 $startEnd[1] startEnd;
+    
+    float $step = Alembic_getEvaluateEveryOfRange($selectedRow);
+    floatFieldGrp -e -value1 $step evaluateEvery;
+    
+    int $sampleEnabled = Alembic_getSampleEnabledOfRange($selectedRow);
+    checkBoxGrp   -e -value1 $sampleEnabled enableFrameRelativeSample;
+    floatFieldGrp -e -enable $sampleEnabled -value1 $gTmpSampleLowFrames[$rangeIndex]   lowFrameRelativeSample;
+    floatFieldGrp -e -enable $sampleEnabled -value1 $gTmpSampleHighFrames[$rangeIndex]  highFrameRelativeSample;
+    
+    if ($rangeIndex == 0) {
+        checkBoxGrp -e -enable 1 enablePreRoll;
+        if (`checkBoxGrp -q -value1 enablePreRoll`) {
+            floatFieldGrp -e -enable 1 preRollStartFrame;
+            floatFieldGrp -e -enable 1 preRollStep;
+        }
+    }
+    else {
+        checkBoxGrp -e -enable 0 enablePreRoll; // disable checkbox of preroll
+        floatFieldGrp -e -enable 0 preRollStartFrame;
+        floatFieldGrp -e -enable 0 preRollStep;
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_setupRowForPreRoll
+//
+//  Description:
+//      Set up the row for preRoll. The row is always the first row of the table.
+//
+//  Input Arguments:
+//      parent               - Top level parent layout of the option box UI.
+//                             Required so that UI object names can be
+//                             successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_setupRowForPreRoll(string $parent)
+{
+    setParent $parent;
+    
+    // get the first frame range from the second row
+    float $firstFrameRange[] = Alembic_getStartEndFramesOfRange(2); 
+    float $startFrame = `floatFieldGrp -q -value1 preRollStartFrame`;
+    float $step = `floatFieldGrp -q -value1 preRollStep`;
+    if ($step <= 0) {
+        warning (uiRes("m_performAlembicExport.kPrerollStepInvalid"));
+        $step = Alembic_getEvaluateEveryOfRange(1);
+        floatFieldGrp -e -value1 $step preRollStep;
+    }
+    else {
+        scriptTable -edit -cellIndex 1 3 -cellValue $step cacheTimeTable;
+    }
+    
+    float $preRollEndFrame = Alembic_getPrerollEndFrame($startFrame, $firstFrameRange[0], $step);
+
+    string $preRollTimeRangeVal = "" + $startFrame + "-" + $preRollEndFrame;
+    scriptTable -edit -cellIndex 1 1 -cellValue $preRollTimeRangeVal cacheTimeTable;
+    string $yesLabel = Alembic_getYesLabel();
+    scriptTable -edit -cellIndex 1 2 -cellValue $yesLabel cacheTimeTable;
+}
+
+//
+//  Procedure Name:
+//      Alembic_getStartEndFrames
+//
+//  Description:
+//      Get start and end frame according the range mode.
+//      If the mode is 3 (frames are specified directly), do not call this method.
+//
+//  Input Arguments:
+//      mode   - Mode of cache time range.
+//
+//  Return Value:
+//      The start and end frame.
+//
+global proc float[] Alembic_getStartEndFrames(int $mode)
+{
+    float $startEnd[];
+    switch ($mode) {
+        case 4:
+            $startEnd[0] = `currentTime -q`;
+            $startEnd[1] = $startEnd[0];
+            break;
+        case 1:
+            $startEnd[0] = `getAttr defaultRenderGlobals.startFrame`;
+            $startEnd[1] = `getAttr defaultRenderGlobals.endFrame`;
+            break;
+        case 2:
+            $startEnd[0] = `playbackOptions -q -min`;
+            $startEnd[1] = `playbackOptions -q -max`;
+            break;
+        default:
+            // should not going to here
+    }
+    
+    return $startEnd;
+}
+
+//
+//  Procedure Name:
+//      Alembic_getOverlappingSolution
+//
+//  Description:
+//      Determine the resolve method for time ranges overlapping.
+//
+//  Return Value:
+//      1 if "Continue" is selected.
+//      0 if "Review Ranges" is selected.
+//
+proc int Alembic_getOverlappingSolution()
+{
+    global int   $gAlembicShowRangeAdjustDialog;
+    
+    string $res;
+    if ($gAlembicShowRangeAdjustDialog == -1) {
+        string $title = (uiRes("m_performAlembicExport.kRangesAdjusted"));
+        $res = `layoutDialog -title $title -ui ("Alembic_createRangeAdjustedDialog")`;
+    }
+    
+    if ($gAlembicShowRangeAdjustDialog == 1 || $res == "continue")
+        return 1;
+    else
+        return 0;
+}
+
+//
+//  Procedure Name:
+//      Alembic_setupCacheTimeTable
+//
+//  Description:
+//      Create the cache time ranges table when initialize the UI.
+//      If there is time ranges specified by system settings, detect
+//      if the new setting values are overlapped with other time ranges
+//      and resolve it.
+//
+//  Input Arguments:
+//      parent               - Top level parent layout of the option box UI.
+//                             Required so that UI object names can be
+//                             successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+proc Alembic_setupCacheTimeTable(string $parent)
+{
+    global int   $gTmpCacheTimeRangeModes[];
+    global float $gTmpSampleLowFrames[];
+    global float $gTmpSampleHighFrames[];
+    global int $gAllowEditTimeRangeInTable;
+
+    setParent $parent;
+
+    // make sure there is only one row when reset settings
+    // the title is counted as one row (seems a bug of scriptTable)
+    int $totalRows = `scriptTable -q -rows cacheTimeTable`;
+    if ( $totalRows > 2) {
+        int $i;
+        for ($i = 2; $i < $totalRows; $i++) {
+            scriptTable -e -deleteRow 1 cacheTimeTable;
+        }
+    }
+    
+    int $rowNum = 1;
+    int $preRollEnabled = `optionVar -q Alembic_exportEnablePreRoll`;
+    if($preRollEnabled) {
+        scriptTable -edit -insertRow 1 cacheTimeTable;
+        $rowNum++;
+    }
+    
+    clear($gTmpCacheTimeRangeModes);
+    clear($gTmpSampleLowFrames);
+    clear($gTmpSampleHighFrames);
+
+    $gTmpCacheTimeRangeModes = `optionVar -q Alembic_exportCacheTimeRanges`;
+    float $startFrames[] = `optionVar -q Alembic_exportStarts`;
+    float $endFrames[] = `optionVar -q Alembic_exportEnds`;
+    int $sampleEnabled[] = `optionVar -q Alembic_exportEnableFrameRelativeSamples`;
+    $gTmpSampleLowFrames = `optionVar -q Alembic_exportLowFrameRelativeSamples`;
+    $gTmpSampleHighFrames = `optionVar -q Alembic_exportHighFrameRelativeSamples`;
+    float $evaluateEvery[] = `optionVar -q Alembic_exportEvaluateEverys`;
+    
+    // check time ranges and resolve overlapping
+    //
+    int $overlappingResolve = -1;
+    int $rangeRemovedNum = 0;
+    for ($i = 0; $i < size($gTmpCacheTimeRangeModes)-$rangeRemovedNum; $i++) {
+        if ($gTmpCacheTimeRangeModes[$i] != 3) {
+            // if the mode of time range is not start/end, get current time ranges
+            // according system settings
+            //
+            float $startEnd[] = Alembic_getStartEndFrames($gTmpCacheTimeRangeModes[$i]);
+            if ($startEnd[0] != $startFrames[$i] || $startEnd[1] != $endFrames[$i]) {
+                // if current time ranges is not equal to the old one
+                // check if the new time ranges are overlapping                
+                int $isOverlapping = 0;
+                if ($i > 0 && $startEnd[0] <= $endFrames[$i-1]) {
+                    $isOverlapping = 1;
+                }
+                if ($i < size($gTmpCacheTimeRangeModes)-1 && $startEnd[1] >= $startFrames[$i+1]) {
+                    $isOverlapping = 1;
+                }
+                if ($isOverlapping == 1) {
+                    if ($overlappingResolve == -1) {
+                        // get the overlapping resolve method
+                        // the resolve method will be used for other time ranges conflict
+                        $overlappingResolve = Alembic_getOverlappingSolution();
+                    }
+                    if ( $overlappingResolve == 1) {
+                        $startFrames[$i] = $startEnd[0];
+                        $endFrames[$i] = $startEnd[1];
+
+                        // if user select "Continue", resolve conflict
+                        for ($ri = $i+1; $ri < size($gTmpCacheTimeRangeModes); $ri++) {
+                            if ($startEnd[1] >= $endFrames[$ri]) {
+                                $rangeRemovedNum++;
+                            }
+                            else {
+                                if ($startEnd[1] >= $startFrames[$ri]) {
+                                    $startFrames[$ri] = $endFrames[$ri];
+                                    while ($startFrames[$ri] - $evaluateEvery[$ri] > $startEnd[1]) {
+                                        $startFrames[$ri] -= $evaluateEvery[$ri];
+                                    }
+                                    $gTmpCacheTimeRangeModes[$ri] = 3;
+                                }
+                                break;
+                            }
+                        }
+                        if ($rangeRemovedNum > 0) {
+                            Alembic_updateGlobalVariables($i+1, $rangeRemovedNum);
+                            for ($j = $i+1; $j < size($gTmpCacheTimeRangeModes)-$rangeRemovedNum; $j++) {
+                                $startFrames[$j] = $startFrames[$j+$rangeRemovedNum];
+                                $endFrames[$j] = $endFrames[$j+$rangeRemovedNum];
+                                $sampleEnabled[$j] = $sampleEnabled[$j+$rangeRemovedNum];
+                                $evaluateEvery[$j] = $evaluateEvery[$j+$rangeRemovedNum];
+                            }
+                        }
+                        
+                        int $preRangeRemovedNum = 0;
+                        for ($ri = $i-1; $ri >= 0; $ri--) {
+                            if ($startEnd[0] <= $startFrames[$ri]) {
+                                $rangeRemovedNum++;
+                                $preRangeRemovedNum++;
+                            }
+                            else {
+                                if ($startEnd[0] <= $endFrames[$ri]) {
+                                    $endFrames[$ri] = $startFrames[$ri];
+                                    while ($endFrames[$ri] + $evaluateEvery[$ri] < $startEnd[0]) {
+                                        $endFrames[$ri] += $evaluateEvery[$ri];
+                                    }
+                                    $gTmpCacheTimeRangeModes[$ri] = 3;
+                                }
+                                break;
+                            }
+                        }
+                        if ($ri != $i-1) {
+                            int $num = $i-1-$ri;
+                            Alembic_updateGlobalVariables($ri+1, $num);
+                            for ($j = $ri+1; $j < size($gTmpCacheTimeRangeModes)-$num; $j++) {
+                                $startFrames[$j] = $startFrames[$j+$num];
+                                $endFrames[$j] = $endFrames[$j+$num];
+                                $sampleEnabled[$j] = $sampleEnabled[$j+$num];
+                                $evaluateEvery[$j] = $evaluateEvery[$j+$num];
+                            }
+                        }
+                        // we will check from next new range
+                        $i = $i - $preRangeRemovedNum;
+                    }
+                    else {
+                        // if user select "Review Ranges", change the mode to start/end
+                        $gTmpCacheTimeRangeModes[$i] = 3;
+                    }
+                }
+                else {
+                    $startFrames[$i] = $startEnd[0];
+                    $endFrames[$i] = $startEnd[1];
+                }
+            }
+        }
+    }
+    
+
+    int $firstRowNum = $rowNum;
+    int $i;
+    for ($i = 0; $i < size($gTmpCacheTimeRangeModes)-$rangeRemovedNum; $i++) {
+        scriptTable -edit -insertRow $rowNum cacheTimeTable;
+        
+        string $frameSample = "0";
+        if ($sampleEnabled[$i] > 0 )
+            $frameSample = "" + $gTmpSampleLowFrames[$i] + "; 0; " + $gTmpSampleHighFrames[$i];
+    
+        string $cacheTimeRangeVal;
+        $cacheTimeRangeVal = "" + $startFrames[$i] + "-" + $endFrames[$i];
+
+        $gAllowEditTimeRangeInTable = 1;
+        scriptTable -edit -cellIndex $rowNum 1 -cellValue $cacheTimeRangeVal cacheTimeTable;
+        $gAllowEditTimeRangeInTable = 0;
+        scriptTable -edit -cellIndex $rowNum 3 -cellValue $evaluateEvery[$i] cacheTimeTable;
+        scriptTable -edit -cellIndex $rowNum 4 -cellValue $frameSample    cacheTimeTable;
+
+        $rowNum++;
+    }
+    
+    if($preRollEnabled) {
+        Alembic_setupRowForPreRoll($parent);
+    }
+
+    $gAllowEditTimeRangeInTable = 1;
+    scriptTable -edit -cellIndex $rowNum 1 -cellValue (uiRes("m_performAlembicExport.kAddRange")) cacheTimeTable;
+    $gAllowEditTimeRangeInTable = 0;
+
+    scriptTable -edit -selectedRows $firstRowNum cacheTimeTable;
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportSetup
+//
+//  Description:
+//      Update the state of the option box UI to reflect the option values.
+//
+//  Input Arguments:
+//      parent               - Top level parent layout of the option box UI.
+//                             Required so that UI object names can be
+//                             successfully resolved.
+//
+//      forceFactorySettings - Whether the option values should be set to
+//                             default values.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportSetup(string $parent, int $forceFactorySettings)
+{
+    //  Retrieve the option settings
+    //
+    setOptionVars($forceFactorySettings);
+
+    setParent $parent;
+
+    //  Query the preroll optionVar's and set the values into the controls.
+    //
+    int $preRollEnabled = `optionVar -q Alembic_exportEnablePreRoll`;
+    checkBoxGrp   -e -value1 $preRollEnabled                                                             enablePreRoll;
+    floatFieldGrp -e -value1 `optionVar -q Alembic_exportPreRollStartFrame` -enable $preRollEnabled      preRollStartFrame;
+    floatFieldGrp -e -value1 `optionVar -q Alembic_exportPreRollStep` -enable $preRollEnabled            preRollStep;
+
+    // General Options UI will be updated when setup the table
+    Alembic_setupCacheTimeTable($parent);
+
+    string $attrArray[], $attrPrefixArray[];
+    string $attr       = `optionVar -q Alembic_exportAttr`;
+    string $attrPrefix = `optionVar -q Alembic_exportAttrPrefix`;
+    tokenize $attr       "," $attrArray;
+    tokenize $attrPrefix "," $attrPrefixArray;
+    textScrollList -e -removeAll attrList;
+    textScrollList -e -removeAll attrPrefixList;
+    int $i;
+    for ($i = 0; $i < size($attrArray); $i++) {
+        if (size($attrArray[$i]) > 0) {
+            textScrollList -e -append $attrArray[$i] attrList;
+        }
+    }
+    for ($i = 0; $i < size($attrPrefixArray); $i++) {
+        if (size($attrPrefixArray[$i]) > 0) {
+            textScrollList -e -append $attrPrefixArray[$i] attrPrefixList;
+        }
+    }
+
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportVerbose`                 verbose;
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportNoNormals`               noNormals;
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportRenderableOnly`          renderableOnly;
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportStripNamespaces`         stripNamespaces;
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportUVWrite`                 uvWrite;
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportWriteColorSets`          writeColorSets;
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportWriteFaceSets`           writeFaceSets;
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportWholeFrameGeo`           wholeFrameGeo;
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportWorldSpace`              worldSpace;
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportWriteVisibility`         writeVisibility;
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportFilterEulerRotations`    filterEulerRotations;
+    checkBoxGrp -e -value1 `optionVar -q Alembic_exportWriteCreases`            writeCreases;
+
+    int $dataFormat = `optionVar -q Alembic_exportDataFormat`;
+    if ($dataFormat == 1) {
+        radioButtonGrp -e -select 1 dataFormatHDF5;
+    } else if ($dataFormat == 2) {
+        radioButtonGrp -e -select 1 dataFormatOgawa;
+    }
+
+    textFieldGrp -e -text `optionVar -q Alembic_exportPerFrameCallbackMel`      perFrameCallbackMel;
+    textFieldGrp -e -text `optionVar -q Alembic_exportPostJobCallbackMel`       postJobCallbackMel;
+    textFieldGrp -e -text `optionVar -q Alembic_exportPerFrameCallbackPython`   perFrameCallbackPython;
+    textFieldGrp -e -text `optionVar -q Alembic_exportPostJobCallbackPython`    postJobCallbackPython;
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportCallback
+//
+//  Description:
+//      Update the option values with the current state of the option box UI.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box UI. Required so
+//                  that UI object names can be successfully resolved.
+//
+//      exportAll - Whether to export the entire scene or only selected objects.
+//
+//      doIt      - Whether the command should execute.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportCallback(string $parent, int $exportAll, int $doIt)
+{
+    global int   $gTmpCacheTimeRangeModes[];
+    global float $gTmpSampleLowFrames[];
+    global float $gTmpSampleHighFrames[];
+
+    setParent $parent;
+
+    //  Set the optionVar's from the time range table
+    optionVar -clearArray Alembic_exportCacheTimeRanges;
+    optionVar -clearArray Alembic_exportStarts;
+    optionVar -clearArray Alembic_exportEnds;
+    optionVar -clearArray Alembic_exportEvaluateEverys;
+    optionVar -clearArray   Alembic_exportEnableFrameRelativeSamples;
+    optionVar -clearArray Alembic_exportLowFrameRelativeSamples;
+    optionVar -clearArray Alembic_exportHighFrameRelativeSamples;
+
+    int $totalRows = `scriptTable -q -rows cacheTimeTable`;
+    int $proRollEnabled = `checkBoxGrp   -q -value1 enablePreRoll`;
+    int $i;
+    int $curRow = $proRollEnabled+1;
+    for ($i = 0; $i < $totalRows-2-$proRollEnabled; $i++, $curRow++) {
+        float $startEndFrames[] = Alembic_getStartEndFramesOfRange($curRow);
+        optionVar -floatValueAppend Alembic_exportStarts $startEndFrames[0];
+        optionVar -floatValueAppend Alembic_exportEnds $startEndFrames[1];
+        
+        float $step = Alembic_getEvaluateEveryOfRange($curRow);
+        optionVar -floatValueAppend Alembic_exportEvaluateEverys $step;
+        
+        int $sampleEnabled = Alembic_getSampleEnabledOfRange($curRow);
+        optionVar -intValueAppend Alembic_exportEnableFrameRelativeSamples $sampleEnabled;
+        
+        optionVar -intValueAppend Alembic_exportCacheTimeRanges $gTmpCacheTimeRangeModes[$i];
+        optionVar -floatValueAppend Alembic_exportLowFrameRelativeSamples $gTmpSampleLowFrames[$i];
+        optionVar -floatValueAppend Alembic_exportHighFrameRelativeSamples $gTmpSampleHighFrames[$i];
+    }
+
+    //  Set the optionVar's from the control values, and then
+    //  perform the command.
+    optionVar -intValue   Alembic_exportEnablePreRoll        $proRollEnabled;
+    optionVar -floatValue Alembic_exportPreRollStartFrame    `floatFieldGrp -q -value1 preRollStartFrame`;
+    optionVar -floatValue Alembic_exportPreRollStep          `floatFieldGrp -q -value1 preRollStep`;
+
+    string $attrArray[]       = `textScrollList -q -allItems attrList`;
+    string $attrPrefixArray[] = `textScrollList -q -allItems attrPrefixList`;
+    string $attr, $attrPrefix;
+    int $i;
+    for ($i = 0; $i < size($attrArray); $i++) {
+        if ($i > 0) $attr += ",";
+        $attr += $attrArray[$i];
+    }
+    for ($i = 0; $i < size($attrPrefixArray); $i++) {
+        if ($i > 0) $attrPrefix += ",";
+        $attrPrefix += $attrPrefixArray[$i];
+    }
+    optionVar -stringValue Alembic_exportAttr       $attr;
+    optionVar -stringValue Alembic_exportAttrPrefix $attrPrefix;
+
+    optionVar -intValue Alembic_exportVerbose                 `checkBoxGrp -q -value1 verbose`;
+    optionVar -intValue Alembic_exportNoNormals               `checkBoxGrp -q -value1 noNormals`;
+    optionVar -intValue Alembic_exportRenderableOnly          `checkBoxGrp -q -value1 renderableOnly`;
+    optionVar -intValue Alembic_exportStripNamespaces         `checkBoxGrp -q -value1 stripNamespaces`;
+    optionVar -intValue Alembic_exportUVWrite                 `checkBoxGrp -q -value1 uvWrite`;
+    optionVar -intValue Alembic_exportWriteColorSets          `checkBoxGrp -q -value1 writeColorSets`;
+    optionVar -intValue Alembic_exportWriteFaceSets           `checkBoxGrp -q -value1 writeFaceSets`;
+    optionVar -intValue Alembic_exportWholeFrameGeo           `checkBoxGrp -q -value1 wholeFrameGeo`;
+    optionVar -intValue Alembic_exportWorldSpace              `checkBoxGrp -q -value1 worldSpace`;
+    optionVar -intValue Alembic_exportWriteVisibility         `checkBoxGrp -q -value1 writeVisibility`;
+    optionVar -intValue Alembic_exportFilterEulerRotations    `checkBoxGrp -q -value1 filterEulerRotations`;
+    optionVar -intValue Alembic_exportWriteCreases            `checkBoxGrp -q -value1 writeCreases`;
+
+
+    int $dataFormat = 1;
+    if (`radioButtonGrp -q -select dataFormatHDF5`) {
+        $dataFormat = 1;
+    } else if (`radioButtonGrp -q -select dataFormatOgawa`) {
+        $dataFormat = 2;
+    }
+    optionVar -intValue Alembic_exportDataFormat $dataFormat;
+
+    optionVar -stringValue Alembic_exportPerFrameCallbackMel    `textFieldGrp -q -text perFrameCallbackMel`;
+    optionVar -stringValue Alembic_exportPostJobCallbackMel     `textFieldGrp -q -text postJobCallbackMel`;
+    optionVar -stringValue Alembic_exportPerFrameCallbackPython `textFieldGrp -q -text perFrameCallbackPython`;
+    optionVar -stringValue Alembic_exportPostJobCallbackPython  `textFieldGrp -q -text postJobCallbackPython`;
+
+    if ($doIt) {
+        performAlembicExport 0 $exportAll;
+    }
+}
+
+//
+//  Procedure Name:
+//      exportOptionsUI
+//
+//  Description:
+//      Construct the UI for option box or file options.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      Top level layout of the options UI.
+//
+proc string exportOptionsUI(string $parent)
+{
+    //  The argument is used as the parent for the options UI
+    //
+    setParent $parent;
+
+    //  Activate the default UI template so that the layout of this
+    //  option box is consistent with the layout of the rest of the
+    //  application.
+    //
+    setUITemplate -pushTemplate DefaultTemplate;
+
+    //  Turn on the wait cursor.
+    //
+    waitCursor -state 1;
+
+    // Create option box or file options contents.
+    //
+    string $optionLayout = `scrollLayout -childResizable 1`;
+    columnLayout -adjustableColumn true;
+
+        float $secondLevelIndent = 190;
+
+        frameLayout -label (uiRes("m_performAlembicExport.kGeneralOptions")) -collapse 0;
+            columnLayout;
+                radioButtonGrp
+                        -numberOfRadioButtons 1
+                        -label (uiRes("m_performAlembicExport.kCacheTimeRange")) 
+                        -label1 (uiRes("m_performAlembicExport.kCurrentFrame"))
+                        -onCommand1 ("Alembic_exportCacheTimeRangeChanged " + $optionLayout + " 0")
+                        rangeCurrentFrame;
+                radioButtonGrp
+                        -numberOfRadioButtons 1
+                        -label1 (uiRes("m_performAlembicExport.kRenderSettings"))
+                        -shareCollection rangeCurrentFrame
+                        -onCommand1 ("Alembic_exportCacheTimeRangeChanged " + $optionLayout + " 0")
+                        rangeRenderSettings;
+                radioButtonGrp
+                        -numberOfRadioButtons 1
+                        -label1 (uiRes("m_performAlembicExport.kTimeSlider")) 
+                        -shareCollection rangeCurrentFrame
+                        -onCommand1 ("Alembic_exportCacheTimeRangeChanged " + $optionLayout + " 0")
+                        rangeTimeSlider;
+                radioButtonGrp
+                        -numberOfRadioButtons 1
+                        -label1 (uiRes("m_performAlembicExport.kStartEnd")) 
+                        -shareCollection rangeCurrentFrame
+                        -onCommand1 ("Alembic_exportCacheTimeRangeChanged " + $optionLayout + " 0")
+                        rangeStartEnd;
+                floatFieldGrp
+                        -numberOfFields 2
+                        -label (uiRes("m_performAlembicExport.kStartEnd2"))
+                        -changeCommand ("Alembic_exportCacheTimeFramesChanged " + $optionLayout)
+                        startEnd;
+                floatFieldGrp
+                        -numberOfFields 1
+                        -label (uiRes("m_performAlembicExport.kStep")) 
+                        -changeCommand ("Alembic_exportEvaluateEveryChanged " + $optionLayout)
+                        evaluateEvery;
+
+                separator -height 10 -style "none";
+
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label (uiRes("m_performAlembicExport.kFrameRelativeSample"))
+                        -changeCommand1 ("Alembic_exportEnableFrameRelativeSampleChanged " + $optionLayout)
+                        enableFrameRelativeSample;
+                floatFieldGrp
+                        -numberOfFields 1
+                        -label (uiRes("m_performAlembicExport.kLowFrameRelativeSample"))
+                        -columnWidth 1 $secondLevelIndent
+                        -changeCommand ("Alembic_frameRelativeSampleChanged " + $optionLayout)
+                        lowFrameRelativeSample;
+                floatFieldGrp
+                        -numberOfFields 1
+                        -label (uiRes("m_performAlembicExport.kHighFrameRelativeSample"))
+                        -columnWidth 1 $secondLevelIndent
+                        -changeCommand ("Alembic_frameRelativeSampleChanged " + $optionLayout)
+                        highFrameRelativeSample;
+
+                separator -height 10 -style "none";
+
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label (uiRes("m_performAlembicExport.kPreRoll")) 
+                        -changeCommand1 ("Alembic_exportEnablePreRollChanged " + $optionLayout)
+                        enablePreRoll;
+                floatFieldGrp
+                        -numberOfFields 1
+                        -label (uiRes("m_performAlembicExport.kPreRollStart"))
+                        -columnWidth 1 $secondLevelIndent
+                        -changeCommand ("Alembic_setupRowForPreRoll " + $optionLayout)
+                        preRollStartFrame;
+                floatFieldGrp
+                        -numberOfFields 1
+                        -label (uiRes("m_performAlembicExport.kPreRollStep"))
+                        -columnWidth 1 $secondLevelIndent
+                        -changeCommand ("Alembic_setupRowForPreRoll " + $optionLayout)
+                        preRollStep;
+            setParent ..;
+        setParent ..;
+        
+        frameLayout -label (uiRes("m_performAlembicExport.kCacheTimeFrame")) -collapse 0;
+            string $tableForm = `formLayout`;
+                scriptTable 
+                    -columns 4
+                    -rows 1
+                    -height 140
+                    -editable true
+                    -useDoubleClickEdit true
+                    -selectionBehavior 1
+                    -selectionMode 1
+                    -selectionChangedCmd Alembic_cacheTimeSelectionChanged
+                    -rowsToBeRemovedCmd Alembic_cacheTimeRangeToBeRemoved
+                    -rowsRemovedCmd Alembic_cacheTimeRangeRemoved
+                    -label 1 (uiRes("m_performAlembicExport.kCacheTimeCol")) 
+                    -label 2 (uiRes("m_performAlembicExport.kPreRollCol")) 
+                    -label 3 (uiRes("m_performAlembicExport.kStepCol")) 
+                    -label 4 (uiRes("m_performAlembicExport.kSubsamplesCol"))
+                    -cellChangedCmd Alembic_cacheTimeCellChanged
+                    -afterCellChangedCmd Alembic_cacheTimeAfterCellChanged
+                    -multiEditEnabled false
+                    cacheTimeTable;
+                
+                formLayout -edit
+                    -attachForm     cacheTimeTable     "top"         0
+                    -attachForm     cacheTimeTable     "left"         0
+                    -attachForm     cacheTimeTable     "right"     0
+                    -attachForm     cacheTimeTable     "bottom"     0
+                    $tableForm;
+            setParent ..;    
+        setParent ..;
+        
+        frameLayout -label (uiRes("m_performAlembicExport.kAttributeFrame")) -collapse 0 -marginHeight 3 -marginWidth 3;
+            columnLayout -adjustableColumn 1 -rowSpacing 3;
+                rowLayout
+                        -numberOfColumns 4
+                        -columnWidth4 90 120 95 95
+                        -columnAttach4 "left" "left" "right" "right"
+                        -columnAlign 1 "left";
+                    text
+                        -label (uiRes("m_performAlembicExport.kAttribute"));
+                    textField
+                        -changeCommand ("Alembic_exportAttrAddRemove 0 " + $optionLayout)
+                        attrField;
+                    button
+                        -label (uiRes("m_performAlembicExport.kAddAttr"))
+                        -width 90
+                        -command ("Alembic_exportAttrAddRemove 0 " + $optionLayout);
+                    button
+                        -label (uiRes("m_performAlembicExport.kRemoveAttr"))
+                        -width 90
+                        -command ("Alembic_exportAttrAddRemove 1 " + $optionLayout);
+                setParent ..;
+
+                textScrollList
+                        -numberOfRows 8
+                        -allowMultiSelection 1
+                        -height 200
+                        attrList;
+
+                rowLayout
+                        -numberOfColumns 3
+                        -columnWidth3 115 115 115
+                        -columnAttach3 "left" "right" "right";
+                    button
+                        -label (uiRes("m_performAlembicExport.kFromChannelBox"))
+                        -width 130
+                        -command ("Alembic_exportAttrGetChannels " + $optionLayout);
+                    button
+                        -label (uiRes("m_performAlembicExport.kRemoveSelectedAttr"))
+                        -width 130
+                        -command ("Alembic_exportAttrRemove 0 " + $optionLayout);
+                    button
+                        -label (uiRes("m_performAlembicExport.kRemoveAllAttr"))
+                        -width 130
+                        -command ("Alembic_exportAttrRemove 1 " + $optionLayout);
+                setParent ..;
+            setParent ..;
+        setParent ..;
+
+        frameLayout -label (uiRes("m_performAlembicExport.kAttributePrefixFrame")) -collapse 0 -marginHeight 3 -marginWidth 3;
+            columnLayout -adjustableColumn 1 -rowSpacing 3;
+                rowLayout
+                        -numberOfColumns 4
+                        -columnWidth4 90 120 95 95
+                        -columnAttach4 "left" "left" "right" "right"
+                        -columnAlign 1 "left";
+                    text
+                        -label (uiRes("m_performAlembicExport.kAttributePrefix"));
+                    textField
+                        -changeCommand ("Alembic_exportAttrPrefixAddRemove 0 " + $optionLayout)
+                        attrPrefixField;
+                    button
+                        -label (uiRes("m_performAlembicExport.kAddAttrPrefix"))
+                        -width 90
+                        -command ("Alembic_exportAttrPrefixAddRemove 0 " + $optionLayout);
+                    button
+                        -label (uiRes("m_performAlembicExport.kRemoveAttrPrefix"))
+                        -width 90
+                        -command ("Alembic_exportAttrPrefixAddRemove 1 " + $optionLayout);
+                setParent ..;
+
+                textScrollList
+                        -numberOfRows 8
+                        -allowMultiSelection 1
+                        -height 200
+                        attrPrefixList;
+
+                rowLayout
+                        -numberOfColumns 2
+                        -columnWidth2 115 115
+                        -columnAttach2 "left" "left";
+                    button
+                        -label (uiRes("m_performAlembicExport.kRemoveSelectedAttrPrefix"))
+                        -width 110
+                        -command ("Alembic_exportAttrPrefixRemove 0 " + $optionLayout);
+                    button
+                        -label (uiRes("m_performAlembicExport.kRemoveAllAttrPrefix"))
+                        -width 110
+                        -command ("Alembic_exportAttrPrefixRemove 1 " + $optionLayout);
+                setParent ..;
+            setParent ..;
+        setParent ..;
+
+        frameLayout -label (uiRes("m_performAlembicExport.kAdvancedOptions")) -collapse 0;
+            columnLayout;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kVerbose")) 
+                        verbose;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kNoNormals")) 
+                        noNormals;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kRenerableOnly"))
+                        renderableOnly;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kStripNamespaces")) 
+                        stripNamespaces;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kUVWrite")) 
+                        uvWrite;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kWriteColorSets")) 
+                        writeColorSets;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kWriteFaceSets")) 
+                        writeFaceSets;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kWholeFrameGeo")) 
+                        wholeFrameGeo;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kWorldSpace")) 
+                        worldSpace;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kWriteVisibility")) 
+                        writeVisibility;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kFilterEulerRotations")) 
+                        filterEulerRotations;
+                checkBoxGrp
+                        -numberOfCheckBoxes 1
+                        -label1 (uiRes("m_performAlembicExport.kWriteCreases")) 
+                        writeCreases;
+
+                radioButtonGrp
+                        -numberOfRadioButtons 1
+                        -label (uiRes("m_performAlembicExport.kFileFormat"))
+                        -label1 (uiRes("m_performAlembicExport.kDataFormatHDF5Label"))
+                        -annotation (uiRes("m_performAlembicExport.kDataFormatHDF5Annot"))
+                        dataFormatHDF5;
+                radioButtonGrp
+                        -numberOfRadioButtons 1
+                        -label1 (uiRes("m_performAlembicExport.kDataFormatOgawaLabel"))
+                        -annotation (uiRes("m_performAlembicExport.kDataFormatOgawaAnnot"))
+                        -shareCollection dataFormatHDF5
+                        dataFormatOgawa;
+            setParent ..;
+        setParent ..;
+
+        frameLayout -label (uiRes("m_performAlembicExport.kCallbacks")) -collapse 0;
+            columnLayout;
+                textFieldGrp
+                        -label (uiRes("m_performAlembicExport.kPerFrameCallbackMel")) 
+                        perFrameCallbackMel;
+                textFieldGrp
+                        -label (uiRes("m_performAlembicExport.kPostJobCallbackMel")) 
+                        postJobCallbackMel;
+                textFieldGrp
+                        -label (uiRes("m_performAlembicExport.kPerFrameCallbackPython")) 
+                        perFrameCallbackPython;
+                textFieldGrp
+                        -label (uiRes("m_performAlembicExport.kPostJobCallbackPython")) 
+                        postJobCallbackPython;
+            setParent ..;
+        setParent ..;
+
+    // Attach callbacks to update Start/End fields.
+    //
+    scriptJob -parent $optionLayout
+        -event "timeChanged" ("Alembic_activeCacheTimeRangeChanged " + $optionLayout + " 4");
+    scriptJob -parent $optionLayout
+        -event "playbackRangeChanged" ("Alembic_activeCacheTimeRangeChanged " + $optionLayout + " 2");
+    scriptJob -parent $optionLayout
+        -attributeChange "defaultRenderGlobals.startFrame" ("Alembic_activeCacheTimeRangeChanged " + $optionLayout + " 1");
+    scriptJob -parent $optionLayout
+        -attributeChange "defaultRenderGlobals.endFrame" ("Alembic_activeCacheTimeRangeChanged " + $optionLayout + " 1");
+
+    //  Turn off the wait cursor.
+    //
+    waitCursor -state 0;
+
+    // Deactivate the default UI template
+    //
+    setUITemplate -popTemplate;
+
+    return $optionLayout;
+}
+
+//
+//  Procedure Name:
+//      Alembic_activeCacheTimeRangeChanged
+//
+//  Description:
+//      Callback procedure when Cache Time Range specified by system settings 
+//      is changed.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_activeCacheTimeRangeChanged(string $parent, int $mode)
+{
+    global int   $gTmpCacheTimeRangeModes[];
+
+    setParent $parent;
+
+    int $prerollEnabled = `checkBoxGrp -q -value1 enablePreRoll`;
+    int $totalRows = `scriptTable -q -rows cacheTimeTable`;
+    int $rangeCount = $totalRows - $prerollEnabled - 2;
+    for ($i = 0; $i < $rangeCount; $i++) {
+        if ($gTmpCacheTimeRangeModes[$i] == $mode) {
+            int $row = $i + $prerollEnabled + 1;
+            // make the row active
+            scriptTable -edit -selectedRows $row cacheTimeTable;
+            Alembic_exportCacheTimeRangeChanged($parent, 1);
+            break;
+        }
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportCacheTimeRangeChanged
+//
+//  Description:
+//      Callback procedure when the state of Cache Time Range radio
+//      button group has been changed.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportCacheTimeRangeChanged(string $parent, int $checkOveralpping)
+{
+    global int   $gTmpCacheTimeRangeModes[];
+
+    setParent $parent;
+
+    int $mode;
+    if (`radioButtonGrp -q -select rangeRenderSettings`) {
+        $mode = 1;
+    }
+    else if (`radioButtonGrp -q -select rangeTimeSlider`) {
+        $mode = 2;
+    }
+    else if (`radioButtonGrp -q -select rangeCurrentFrame`) {
+        $mode = 4;
+    }
+    else {
+        $mode = 3;
+    }
+
+    // Update start/end float fields.
+    //
+    int $rangeIndex = Alembic_getActiveTimeRangeIndex();
+    if ($mode != 3) {
+        // check duplicated mode
+        //
+        int $prerollEnabled = `checkBoxGrp -q -value1 enablePreRoll`;
+        int $totalRows = `scriptTable -q -rows cacheTimeTable`;
+        int $rangeCount = $totalRows - $prerollEnabled - 2;
+        for ($i = 0; $i < $rangeCount; $i++) {
+            if ($gTmpCacheTimeRangeModes[$i] == $mode &&
+                $i != $rangeIndex) {
+                warning (uiRes("m_performAlembicExport.kDuplicatedMode"));
+                Alembic_setRangeModeUI ($gTmpCacheTimeRangeModes[$rangeIndex]);
+                return;
+            }
+        }
+
+        float $startEnd[] = Alembic_getStartEndFrames($mode);
+        if ($checkOveralpping) {
+            if (Alembic_adjustFrameRanges($rangeIndex, $startEnd[0], $startEnd[1], 1))
+            {
+                if (Alembic_getOverlappingSolution() == 0) {
+                    // abort the user operation and show the dialog
+                    //
+                    float $start = `floatFieldGrp -q -value1 startEnd`;
+                    float $end = `floatFieldGrp -q -value2 startEnd`;
+                    switch ($mode) {
+                        case 1:
+                                setAttr defaultRenderGlobals.startFrame $start;
+                                setAttr defaultRenderGlobals.endFrame $end;
+                                break;
+                        case 2:
+                                playbackOptions -e -minTime $start -maxTime $end;
+                                break;
+                        case 4:
+                                currentTime -e $start;
+                                break;
+                    }
+                    setFocus $parent;
+                    return;
+                }
+            }
+        }
+
+        floatFieldGrp -e -value1 $startEnd[0]
+                         -value2 $startEnd[1]
+                         -enable 0
+                         startEnd;
+        
+        int $row = Alembic_getActiveTimeRange();
+        $gTmpCacheTimeRangeModes[$rangeIndex] = $mode;
+        Alembic_updateCacheTimeRangeRow($row);
+    }
+    else {
+        floatFieldGrp -e -enable 1 startEnd;
+        $gTmpCacheTimeRangeModes[$rangeIndex] = $mode;
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportEnableFrameRelativeSampleChanged
+//
+//  Description:
+//      Callback procedure when the state of Enable frame relative sample checkbox has been changed.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportEnableFrameRelativeSampleChanged(string $parent)
+{
+    setParent $parent;
+
+    // Enable or disable Low/High fields
+    int $frameRelativeSampleEnabled = `checkBoxGrp -q -value1 enableFrameRelativeSample`;
+    floatFieldGrp -e -enable $frameRelativeSampleEnabled lowFrameRelativeSample;
+    floatFieldGrp -e -enable $frameRelativeSampleEnabled highFrameRelativeSample;
+    
+    int $activeRow = Alembic_getActiveTimeRange();
+
+    if( $frameRelativeSampleEnabled) {
+        string $frameSampleVal = ""+`floatFieldGrp -q -value1 lowFrameRelativeSample` + "; 0; " + `floatFieldGrp -q -value1 highFrameRelativeSample`;
+        scriptTable -edit -cellIndex $activeRow 4 -cellValue $frameSampleVal cacheTimeTable;
+    }
+    else {
+        scriptTable -edit -cellIndex $activeRow 4 -cellValue "0" cacheTimeTable;
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportEnablePreRollChanged
+//
+//  Description:
+//      Callback procedure when the state of Enable Pre Roll checkbox has been changed.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportEnablePreRollChanged(string $parent)
+{
+    setParent $parent;
+
+    // enable/disable preRollStartFrame
+    //
+    int $preRollEnabled = `checkBoxGrp -q -value1 enablePreRoll`;
+    floatFieldGrp -e -enable $preRollEnabled preRollStartFrame;
+    floatFieldGrp -e -enable $preRollEnabled preRollStep;
+    
+    if ($preRollEnabled) {
+        // insert row for preRoll in the beginning of scriptTable
+        scriptTable -edit -insertRow 1 cacheTimeTable;
+        Alembic_setupRowForPreRoll($parent);
+    }
+    else {
+        // delete row 1 for preRoll in scriptTable
+        scriptTable -edit -deleteRow 1 cacheTimeTable;
+        // select the first time range again. The default behavior
+        // will select the second row, which is not expected.
+        scriptTable -edit -selectedRows 1 cacheTimeTable;
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_frameRelativeSampleChanged
+//
+//  Description:
+//      Callback procedure when the frame sample has been changed.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_frameRelativeSampleChanged(string $parent)
+{
+    global float $gTmpSampleLowFrames[];
+    global float $gTmpSampleHighFrames[];
+
+    setParent $parent;
+    
+    int $activeRow = Alembic_getActiveTimeRange();
+    int $rangeIndex = Alembic_getActiveTimeRangeIndex();
+    
+    $gTmpSampleLowFrames[$rangeIndex] = `floatFieldGrp -q -value1 lowFrameRelativeSample`;
+    $gTmpSampleHighFrames[$rangeIndex] = `floatFieldGrp -q -value1 highFrameRelativeSample`;
+
+    string $frameRelativeSampleVal = "" + $gTmpSampleLowFrames[$rangeIndex] + "; 0; " + $gTmpSampleHighFrames[$rangeIndex];
+    scriptTable -edit -cellIndex $activeRow 4 -cellValue $frameRelativeSampleVal cacheTimeTable;
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportEvaluateEveryChanged
+//
+//  Description:
+//      Callback procedure when step has been changed.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportEvaluateEveryChanged(string $parent)
+{
+    setParent $parent;
+    
+    float $stepVal = `floatFieldGrp -q -value1 evaluateEvery`;
+    int $activeRow = Alembic_getActiveTimeRange();
+
+    if ($stepVal <= 0) {
+        warning (uiRes("m_performAlembicExport.kStepInvalid"));
+        float $oldVal = Alembic_getEvaluateEveryOfRange($activeRow);
+        floatFieldGrp -e -value1 $oldVal evaluateEvery;
+        return;
+    }
+
+    scriptTable -edit -cellIndex $activeRow 3 -cellValue $stepVal cacheTimeTable;
+}
+
+//
+//  Procedure Name:
+//      isUnique
+//
+//  Description:
+//      Determines whether the string array contains the specified string or not.
+//
+//  Input Arguments:
+//      item          - The string item to check in the array.
+//
+//      stringArray   - The array which may contains the string item.
+//
+//  Return Value
+//      True if the stringArray contains the specified item.
+//
+proc int isUnique(string $item, string $stringArray[])
+{
+    int $i, $result = 1;
+    for ($i = 0; $i < size($stringArray); $i++) {
+        if ($item == $stringArray[$i]) {
+            $result = 0;
+            break;
+        }
+    }
+
+    return $result;
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportAttrAddRemove
+//
+//  Description:
+//      Callback procedure when Add/Remove button in Attributes tab is pushed.
+//
+//  Input Arguments:
+//      remove    - 0: Add
+//                  1: Remove
+//
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportAttrAddRemove(int $remove, string $parent)
+{
+    setParent $parent;
+
+    // split the attribute names in the text field
+    string $attr = `textField -q -text attrField`;
+    string $attrList[];
+    tokenize $attr " " $attrList;
+
+    string $attrArray[] = `textScrollList -q -allItems attrList`;
+    int $i;
+    if ($remove) {
+        // remove the attribute
+        for ($i = 0; $i < size($attrList); $i++) {
+            if (!isUnique($attrList[$i], $attrArray)) {
+                textScrollList -e -removeItem $attrList[$i] attrList;
+            }
+        }
+    }
+    else {
+        // add the attribute
+        for ($i = 0; $i < size($attrList); $i++) {
+            if (size($attrList[$i]) > 0 && isUnique($attrList[$i], $attrArray)) {
+                textScrollList -e -append $attrList[$i] attrList;
+            }
+        }
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportAttrGetChannels
+//
+//  Description:
+//      Callback procedure when From Channel Box button in Attributes tab is pushed.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportAttrGetChannels(string $parent)
+{
+    setParent $parent;
+
+    if (`channelBox -q -exists mainChannelBox`) {
+        // current list of attributes
+        string $attrArray[] = `textScrollList -q -allItems attrList`;
+
+        // the list of new attributes to append
+        string $newAttrArray[];
+
+        // selected main attributes
+        string $mainAttrList[]  = `channelBox -q -selectedMainAttributes mainChannelBox`;
+
+        // current selected nodes
+        string $selection[] = `ls -sl`;
+
+        // add selected attributes from channel box to the attribute list
+        string $attr, $node;
+        for ($attr in $mainAttrList) {
+            for ($node in $selection) {
+                if (`attributeExists $attr $node`) {
+                    string $longName = `attributeName -long ($node + "." + $attr)`;
+                    if (isUnique($longName, $attrArray) && isUnique($longName, $newAttrArray)) {
+                        $newAttrArray[size($newAttrArray)] = $longName;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // selected shape attributes
+        string $shapeAttrList[] = `channelBox -q -selectedShapeAttributes mainChannelBox`;
+
+        // shapes
+        string $shapes[] = `listRelatives -shapes $selection`;
+
+        // add selected shape attributes from channel box to the attribute list
+        for ($attr in $shapeAttrList) {
+            for ($node in $shapes) {
+                if (`attributeExists $attr $node`) {
+                    string $longName = `attributeName -long ($node + "." + $attr)`;
+                    if (isUnique($longName, $attrArray) && isUnique($longName, $newAttrArray)) {
+                        $newAttrArray[size($newAttrArray)] = $longName;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // append the attribute list to scroll list
+        for ($attr in $newAttrArray) {
+            textScrollList -e -append $attr attrList;
+        }
+    }
+}
+
+
+//
+//  Procedure Name:
+//      Alembic_exportAttrRemove
+//
+//  Description:
+//      Callback procedure when Remove Selected/All button in Attributes tab is pushed.
+//
+//  Input Arguments:
+//      removeAll - 0: Remove Selected
+//                  1: Remove All
+//
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportAttrRemove(int $removeAll, string $parent)
+{
+    setParent $parent;
+
+    if ($removeAll) {
+        textScrollList -e -removeAll attrList;
+    }
+    else {
+        // remove the selected items
+        string $attrList[] = `textScrollList -q -selectItem attrList`;
+        string $attrItem;
+        for ($attrItem in $attrList) {
+            textScrollList -e -removeItem $attrItem attrList;
+        }
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportAttrPrefixAddRemove
+//
+//  Description:
+//      Callback procedure when Add/Remove button in Attribute Prefix tab is pushed.
+//
+//  Input Arguments:
+//      remove    - 0: Add
+//                  1: Remove
+//
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportAttrPrefixAddRemove(int $remove, string $parent)
+{
+    setParent $parent;
+
+    // split the attribute prefixes in the text field
+    string $attrPrefix = `textField -q -text attrPrefixField`;
+    string $attrPrefixList[];
+    tokenize $attrPrefix " " $attrPrefixList;
+
+    string $attrPrefixArray[] = `textScrollList -q -allItems attrPrefixList`;
+    int $i;
+    if ($remove) {
+        // remove the attribute
+        for ($i = 0; $i < size($attrPrefixList); $i++) {
+            if (!isUnique($attrPrefixList[$i], $attrPrefixArray)) {
+                textScrollList -e -removeItem $attrPrefixList[$i] attrPrefixList;
+            }
+        }
+    }
+    else {
+        // add the attribute
+        for ($i = 0; $i < size($attrPrefixList); $i++) {
+            if (size($attrPrefixList[$i]) > 0 && isUnique($attrPrefixList[$i], $attrPrefixArray)) {
+                textScrollList -e -append $attrPrefixList[$i] attrPrefixList;
+            }
+        }
+    }
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportAttrPrefixRemove
+//
+//  Description:
+//      Callback procedure when Remove Selected/All button in Attribute Prefix tab is pushed.
+//
+//  Input Arguments:
+//      removeAll - 0: Remove Selected
+//                  1: Remove All
+//
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportAttrPrefixRemove(int $removeAll, string $parent)
+{
+    setParent $parent;
+
+    if ($removeAll) {
+        // remove all items
+        textScrollList -e -removeAll attrPrefixList;
+    }
+    else {
+        // remove the selected items
+        string $attrPrefixList[] = `textScrollList -q -selectItem attrPrefixList`;
+        string $attrPrefixItem;
+        for ($attrPrefixItem in $attrPrefixList) {
+            textScrollList -e -removeItem $attrPrefixItem attrPrefixList;
+        }
+    }
+}
+
+//
+//  Procedure Name:
+//      exportOptions
+//
+//  Description:
+//      Construct the option box UI. Involves accessing the standard option
+//      box and customizing the UI accordingly.
+//
+//  Input Arguments:
+//      exportAll - Whether to export the entire scene or only selected objects.
+//
+//  Return Value:
+//      None.
+//
+proc exportOptions(int $exportAll)
+{
+    //  Name of the command for this option box.
+    //
+    string $commandName;
+    string $label;
+    if ($exportAll) {
+        $commandName = "AlembicExportAll";
+        $label       = (uiRes("m_performAlembicExport.kExportAll"));
+    }
+    else {
+        $commandName = "AlembicExportSelection";
+        $label       = (uiRes("m_performAlembicExport.kExportSelection"));
+    }
+
+    //  Build the option box actions.
+    //
+    string $callback = "Alembic_exportCallback";
+    string $setup    = "Alembic_exportSetup";
+
+    //  STEP 1:  Get the option box.
+    //  ============================
+    //
+    //  The value returned is the name of the layout to be used as
+    //  the parent for the option box UI.
+    //
+    string $layout = getOptionBox();
+
+    //  STEP 2:  Pass the command name to the option box.
+    //  =================================================
+    //
+    //  Any default option box behaviour based on the command name is set
+    //  up with this call. For example, updating the 'Help' menu item with
+    //  the name of the command.
+    //
+    setOptionBoxCommandName($commandName);
+
+    //  STEP 3:  Create option box contents.
+    //  ====================================
+    //
+    string $parent = exportOptionsUI($layout);
+
+    //  STEP 4:  Customize the buttons.
+    //  ===============================
+    //
+    //  Provide more descriptive labels for the buttons.
+    //  Disable those buttons that are not applicable to the option box.
+    //  Attach actions to those buttons that are applicable to the option box.
+
+    // 'Export' button
+    //
+    string $exportBtn = getOptionBoxApplyBtn();
+    button -e -label $label
+           -command ($callback + " " + $parent + " " + $exportAll + " 1")
+           $exportBtn;
+
+    // 'Save' button
+    //
+    string $saveBtn = getOptionBoxSaveBtn();
+    button -e
+           -command ($callback + " " + $parent + " " + $exportAll + " 0; hideOptionBox")
+           $saveBtn;
+
+    // 'Reset' button
+    //
+    string $resetBtn = getOptionBoxResetBtn();
+    button -e
+           -command ($setup + " " + $parent + " 1")
+           $resetBtn;
+
+    //  STEP 5:  Set the option box title.
+    //  ==================================
+    //
+    setOptionBoxTitle((uiRes("m_performAlembicExport.kAlembicExport")));
+
+    //  STEP 6:  Customize the 'Help' menu item text.
+    //  =============================================
+    //
+    setOptionBoxHelpTag($commandName);
+
+    //  Set the current values of the option box.
+    //  =========================================
+    //
+    eval ($setup + " " + $parent + " 0");
+
+    //  Show the option box.
+    //  ====================
+    //
+    showOptionBox();
+}
+
+//
+//  Procedure Name:
+//      captureAlembicExportOptionVars
+//
+//  Description:
+//      Capture the current state of option values to an argument list.
+//
+//  Input Arguments:
+//      exportAll - Whether to export the entire scene or only selected objects.
+//
+//  Return Value:
+//      A list of arguments to invoke AbcExport.
+//
+global proc string[] captureAlembicExportOptionVars(int $version, int $exportAll)
+{
+    setOptionVars(0);
+    int    $cacheTimeRanges[]         = `optionVar -q Alembic_exportCacheTimeRanges`;
+    float  $startFrames[]             = `optionVar -q Alembic_exportStarts`;
+    float  $endFrames[]               = `optionVar -q Alembic_exportEnds`;
+    float  $evaluateEvery[]           = `optionVar -q Alembic_exportEvaluateEverys`;
+    int    $enableSample[]            = `optionVar -q Alembic_exportEnableFrameRelativeSamples`;
+    float  $lowFrameRelativeSamples[] = `optionVar -q Alembic_exportLowFrameRelativeSamples`;
+    float  $highFrameRelativeSamples[]= `optionVar -q Alembic_exportHighFrameRelativeSamples`;
+    int    $enablePreRoll             = `optionVar -q Alembic_exportEnablePreRoll`;
+    float  $preRollStartFrame         = `optionVar -q Alembic_exportPreRollStartFrame`;
+    string $attr                      = `optionVar -q Alembic_exportAttr`;
+    string $attrPrefix                = `optionVar -q Alembic_exportAttrPrefix`;
+    int    $verbose                   = `optionVar -q Alembic_exportVerbose`;
+    int    $noNormals                 = `optionVar -q Alembic_exportNoNormals`;
+    int    $renderableOnly            = `optionVar -q Alembic_exportRenderableOnly`;
+    int    $stripNamespaces           = `optionVar -q Alembic_exportStripNamespaces`;
+    int    $uvWrite                   = `optionVar -q Alembic_exportUVWrite`;
+    int    $wholeFrameGeo             = `optionVar -q Alembic_exportWholeFrameGeo`;
+    int    $worldSpace                = `optionVar -q Alembic_exportWorldSpace`;
+    int    $writeVisibility           = `optionVar -q Alembic_exportWriteVisibility`;
+    string $perFrameCallbackMel       = `optionVar -q Alembic_exportPerFrameCallbackMel`;
+    string $postJobCallbackMel        = `optionVar -q Alembic_exportPostJobCallbackMel`;
+    string $perFrameCallbackPython    = `optionVar -q Alembic_exportPerFrameCallbackPython`;
+    string $postJobCallbackPython     = `optionVar -q Alembic_exportPostJobCallbackPython`;
+    
+    string $cacheTimeRangeStr;
+    string $startFrameStr;
+    string $endFrameStr;
+    string $evaluateEveryStr;
+    string $enableSampleStr;
+    string $lowSampleStr;
+    string $highSampleStr;
+    int $i;
+    for ($i = 0; $i < size($cacheTimeRanges); $i++) {
+        if ($i != 0) {
+            $cacheTimeRangeStr += ":";
+            $startFrameStr += ":";
+            $endFrameStr += ":";
+            $evaluateEveryStr += ":";
+            $enableSampleStr += ":";
+            $lowSampleStr += ":";
+            $highSampleStr += ":";
+        }
+        $cacheTimeRangeStr += $cacheTimeRanges[$i];
+        $startFrameStr += $startFrames[$i];
+        $endFrameStr += $endFrames[$i];
+        $evaluateEveryStr += $evaluateEvery[$i];
+        $enableSampleStr += $enableSample[$i];
+        $lowSampleStr += $lowFrameRelativeSamples[$i];
+        $highSampleStr += $highFrameRelativeSamples[$i];
+    }
+
+    string $args[] = {
+        "" + $exportAll,
+        $cacheTimeRangeStr,
+        $startFrameStr,
+        $endFrameStr,
+        $evaluateEveryStr,
+        $enableSampleStr,
+        $lowSampleStr,
+        $highSampleStr,
+        $enablePreRoll,
+        $preRollStartFrame,
+        $attr,
+        $attrPrefix,
+        $verbose,
+        $noNormals,
+        $renderableOnly,
+        $stripNamespaces,
+        $uvWrite,
+        $wholeFrameGeo,
+        $worldSpace,
+        $writeVisibility,
+        $perFrameCallbackMel,
+        $postJobCallbackMel,
+        $perFrameCallbackPython,
+        $postJobCallbackPython
+    };
+
+    if ($version >= 2) {
+        int    $filterEulerRotations    = `optionVar -q Alembic_exportFilterEulerRotations`;
+
+        string $argsVer2[] = {
+            "" + $filterEulerRotations
+        };
+
+        appendStringArray($args, $argsVer2, 1);
+    }
+
+    if ($version >= 3) {
+        int    $writeColorSets      = `optionVar -q Alembic_exportWriteColorSets`;
+        int    $writeFaceSets       = `optionVar -q Alembic_exportWriteFaceSets`;
+
+        string $argsVer3[] = {
+            "" + $writeColorSets,
+            $writeFaceSets
+        };
+
+        appendStringArray($args, $argsVer3, 2);
+    }
+
+    if ($version >= 4) {
+        int $dataFormat = `optionVar -q Alembic_exportDataFormat`;
+
+        string $argsVer4[] = {
+            "" + $dataFormat
+        };
+
+        appendStringArray($args, $argsVer4, 1);
+    }
+
+    if ($version >= 5) {
+        float $preRollStep = `optionVar -q Alembic_exportPreRollStep`;
+
+        string $argsVer5[] = {
+            "" + $preRollStep
+        };
+
+        appendStringArray($args, $argsVer5, 1);
+    }
+        
+    if ($version >= 6) {
+        int    $writeCreases = `optionVar -q Alembic_exportWriteCreases`;
+        string $argsVer6[] = {
+            "" + $writeCreases
+        };
+
+        appendStringArray($args, $argsVer6, 1);
+    }
+
+    return $args;
+}
+
+//
+//  Procedure Name:
+//      assembleCmd
+//
+//  Description:
+//      Construct the command that will apply the option box values.
+//
+//  Input Arguments:
+//      exportAll - Whether to export the entire scene or only selected objects.
+//
+proc string assembleCmd(int $exportAll)
+{
+    int $version = 6;
+    string $args[] = captureAlembicExportOptionVars($version, $exportAll);
+    string $cmd = "doAlembicExportArgList " + $version + " {";
+    int $i;
+    for ($i = 0; $i < size($args); $i++) {
+        if ($i > 0) $cmd += ",";
+        $cmd += ("\"" + encodeString($args[$i]) + "\"");
+    }
+    $cmd += "};";
+    return $cmd;
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportFileOptionsUICreate
+//
+//  Description:
+//      Construct the file options UI.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//      
+global proc Alembic_exportFileOptionsUICreate(string $parent)
+{
+    exportOptionsUI($parent);
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportFileOptionsUIInit
+//
+//  Description:
+//      Update the state of the file options UI to reflect the option values.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//      filter    - The file type filter.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportFileOptionsUIInit(string $parent, string $filter)
+{
+    Alembic_exportSetup $parent 0;
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportAllFileOptionsUICommit
+//
+//  Description:
+//      Update the option values with the current state of the file options UI.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportAllFileOptionsUICommit(string $parent)
+{
+    Alembic_exportCallback $parent 1 0;
+}
+
+//
+//  Procedure Name:
+//      Alembic_exportSelectionFileOptionsUICommit
+//
+//  Description:
+//      Update the option values with the current state of the file options UI.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc Alembic_exportSelectionFileOptionsUICommit(string $parent)
+{
+    Alembic_exportCallback $parent 0 0;
+}
+
+proc int containsWhiteSpace(string $str)
+{
+    if (size(`match " " $str`) > 0) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+//
+//  Procedure Name:
+//      performAlembicExport
+//
+//  Description:
+//      Perform the AlembicExportAll or AlembicExportSelection command using the
+//      corresponding option values. This procedure will also show the option box
+//      window if necessary as well as construct the command string
+//      that will invoke the sphere command with the current
+//      option box values.   
+//
+//  Input Arguments:
+//      0 - Execute the command.
+//      1 - Show the option box dialog.
+//      2 - Return the command.
+//
+//      exportAll - Whether to export the entire scene or only selected objects.
+//
+//  Return Value:
+//      None.
+//
+global proc string performAlembicExport(int $action, int $exportAll)
+{
+    string $cmd;
+
+    switch ($action)
+    {
+    //  Execute the command.
+    //
+    case 0:
+        //  Get the command.
+        //
+        $cmd = assembleCmd($exportAll);
+
+        //  Execute the command with the option settings.
+        //
+        eval($cmd);
+
+        break;
+
+    //  Show the option box.
+    //
+    case 1:
+        //  Show the option box.
+        //
+        exportOptions($exportAll);
+        break;
+
+    //  Return the command string.
+    //
+    case 2:
+        //  Get the command.
+        //
+        $cmd = assembleCmd($exportAll);
+        break;
+    }
+
+    return $cmd;
+}
+

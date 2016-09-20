@@ -1,0 +1,79 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+global proc splatDeformer() 
+{
+	string $soPath;
+	string $soName;
+	if (`about -win`) {
+		$soPath   = apiSamplePluginLocation() + "splatDeformer.mll";
+		$soName   = "splatDeformer.mll";
+	}
+	else {
+		$soPath   = apiSamplePluginLocation() + "splatDeformer.so";
+		$soName   = "splatDeformer.so";
+	}
+	
+	// Load the plugin
+	//
+	if (!apiLoadPlugin($soPath, $soName)) {
+		apiError "Error loading plugin ";
+	}
+
+	string $objects[] = `ls -sl`;
+
+	int $num = size($objects);
+
+	if($num!=2) {
+		error ("Select two objects, a mesh and a deforming object\n");
+	}
+
+	// make sure it is a mesh!!
+
+	string $baseObject = $objects[0];
+	string $deformingObject = $objects[1];
+	string $nodeTypeName = `nodeType $baseObject`;
+
+	if ($nodeTypeName != "transform") {
+		error ($baseObject + " is not a transform node\n");
+		return;
+	}
+
+	string $shapeNodes[] = `listRelatives -s $baseObject`;
+	string $shapeNode = $shapeNodes[0];
+
+	string $shapeNodeType = `nodeType $shapeNode`;
+	if($shapeNodeType != "mesh") {
+		error ($shapeNode + " must be a mesh\n");
+	}
+	select $shapeNode;
+
+	string $splatNodes[];
+	if(catch($splatNodes = evalEcho("deformer -type splatDeformer"))) {
+		apiError "deformer -type splatDeformer command failed";
+		return;
+	}
+	string $splatNode = $splatNodes[0];
+
+	// attach deformer mesh
+	string $shapeNodesDef[] = `listRelatives -s $deformingObject`;
+	string $shapeNodeDef = $shapeNodesDef[0];
+
+	string $shapeNodeDefType = `nodeType $shapeNodeDef`;
+	if($shapeNodeDefType != "mesh") {
+		error ($shapeNodeDef + " must be a mesh\n");
+	}
+
+	// connect the deforming mesh object
+	evalEcho("connectAttr " + $shapeNodeDef + ".worldMesh " + $splatNode + ".deformingMesh");
+}

@@ -1,0 +1,49 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ===========================================================================
+//
+// agreement provided at the time of installation or download, or which
+// ===========================================================================
+//+
+
+global proc AEonbShaderBumpNew(string $attrName)
+{
+	setUITemplate -pushTemplate attributeEditorTemplate;
+	attrNavigationControlGrp -label "Bump Mapping" -attribute $attrName onbBumpControl;
+	setUITemplate -popTemplate;
+}
+
+global proc AEonbShaderBumpReplace(string $attrName)
+{
+	attrNavigationControlGrp -edit -attribute $attrName onbBumpControl;
+}
+
+global proc AEonbShaderTemplate( string $nodeName )
+{
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	editorTemplate -beginLayout "Material Attributes" -collapse 0;
+		editorTemplate -addControl "color";
+		editorTemplate -addControl "roughness";
+		editorTemplate -addControl "transparency";
+		editorTemplate -addControl "incandescence";
+		editorTemplate -addControl "ambientColor";
+		editorTemplate -callCustom "AEonbShaderBumpNew" "AEonbShaderBumpReplace" "normalCamera";
+		editorTemplate -addSeparator;
+		editorTemplate -addControl "specularColor";
+		editorTemplate -addControl "eccentricity";
+		editorTemplate -addControl "specularRollOff";
+	editorTemplate -endLayout;
+
+	AEdependNodeTemplate $nodeName;
+
+	editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}

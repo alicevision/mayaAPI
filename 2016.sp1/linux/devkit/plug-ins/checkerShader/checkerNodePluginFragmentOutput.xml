@@ -1,0 +1,63 @@
+<!--
+===========================================================================
+Copyright 2012 Autodesk, Inc. All rights reserved.
+
+Use of this software is subject to the terms of the Autodesk license
+agreement provided at the time of installation or download, or which
+otherwise accompanies this software in either electronic or hard copy form.
+===========================================================================
+
+Structure output fragment for checker procedural plugin texture
+-->
+
+<fragment uiName="checkerNodePluginFragmentOutput" name="checkerNodePluginFragmentOutput" type="structure" class="ShadeFragment" version="1.0">
+	<description><![CDATA[Struct output for simple checker texture fragment]]></description>
+	<properties>
+		<struct name="checkerNodePluginFragmentOutput" struct_name="checkerNodePluginFragmentOutput" />
+	</properties>
+	<values>
+	</values>
+	<outputs>
+		<alias name="checkerNodePluginFragmentOutput" struct_name="checkerNodePluginFragmentOutput" />
+		<float3 name="outColor" />
+		<float name="outAlpha" />
+	</outputs>
+	<implementation>
+	<implementation render="OGSRenderer" language="Cg" lang_version="2.1">
+		<function_name val="" />
+		<declaration name="checkerNodePluginFragmentOutput">
+		<![CDATA[
+struct checkerNodePluginFragmentOutput
+{
+	float3 outColor;
+	float outAlpha;
+};
+		]]>
+		</declaration>
+	</implementation>
+	<implementation render="OGSRenderer" language="HLSL" lang_version="11.0">
+		<function_name val="" />
+		<declaration name="checkerNodePluginFragmentOutput">
+		<![CDATA[
+struct checkerNodePluginFragmentOutput
+{
+	float3 outColor;
+	float outAlpha;
+};
+		]]>
+		</declaration>
+	</implementation>
+	<implementation render="OGSRenderer" language="GLSL" lang_version="3.0">
+		<function_name val="" />
+		<declaration name="checkerNodePluginFragmentOutput">
+		<![CDATA[
+struct checkerNodePluginFragmentOutput
+{
+	vec3 outColor;
+	float outAlpha;
+};
+		]]>
+		</declaration>
+	</implementation>
+	</implementation>
+</fragment>

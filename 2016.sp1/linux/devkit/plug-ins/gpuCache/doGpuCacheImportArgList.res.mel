@@ -1,0 +1,12 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+displayString -replace -value "Alembic" m_doGpuCacheImportArgList.kAlembic;
+displayString -replace -value "All Files" m_doGpuCacheImportArgList.kAllFiles;
+displayString -replace -value "GPU Cache Import" m_doGpuCacheImportArgList.kGpuCacheImport;
+displayString -replace -value "gpuCache plugin is not loaded" m_doGpuCacheImportArgList.kGpuCachePluginNotLoaded;
+displayString -replace -value "Import" m_doGpuCacheImportArgList.kImport;

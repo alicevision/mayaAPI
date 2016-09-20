@@ -1,0 +1,41 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+// Assumes lassoTool.so is already loaded
+//
+global proc lassoToolDeleteUI()
+{
+	string $lassoToolContextName;
+	string $lassoToolToolButtonName;
+	string $dummy;
+
+	setToolTo selectSuperContext;
+
+	if (`optionVar -exists lassoToolToolButtonName`) {
+		$lassoToolToolButtonName = `optionVar -q lassoToolToolButtonName`;
+		$dummy = `deleteUI $lassoToolToolButtonName`;
+		optionVar -rm lassoToolToolButtonName;
+	}
+
+	if (`optionVar -exists lassoToolContextName`) {
+		$lassoToolContextName = `optionVar -q lassoToolContextName`;
+
+		// OBSOLETE:  You no longer enable the display of the tool icon
+		// in the 6th slot in the mini-bar by calling this MEL procedure.
+		// Instead, call MPxContext::setImage from your plug-in.
+		// removeToolIcon($lassoToolContextName);
+
+		$dummy = `deleteUI -tc $lassoToolContextName`;
+		optionVar -rm lassoToolContextName;
+	}
+}

@@ -1,0 +1,1417 @@
+//
+//  Procedure Name:
+//		AEGLSLShaderTemplate
+//
+//  Description Name;
+//		Creates the attribute editor controls for the GLSL shader node
+//
+//  Input Value:
+//		nodeName
+//
+//  Output Value:
+//		None
+//
+
+//
+//  Procedure Name:
+//		AEGLSLShaderTemplate
+//
+
+
+
+////////////////////////////////////////////////////////////////////////
+//                        "GLSL Shader" Layout                        //
+////////////////////////////////////////////////////////////////////////
+
+// This procedure is invoked when necessary to construct the controls
+// for a shader.  Generally, this is only when we are displaying a
+// GLSLShader node for the first time.
+//
+global proc AEGLSLShader_shaderNew( string $sNodeAttr )
+{
+    global int $gAEhwShader_iLayout; // IN: AE instance id for callbacks
+
+    // GLSL Shader File
+    setUITemplate -pst attributeEditorTemplate;
+    rowLayout -nc 4 -cw 2 100 -ad4 2;
+		string $label = getPluginResource( "glslShader", "kShaderFile");
+		string $fileFilter = getPluginResource( "glslShader", "kEffectFiles") + "(*.fx *.fxo *.cgfx *.ogsfx)";
+        AEhwShader_fileNameControls( "shader",      // attribute name
+                                     $label, 		// label
+                                     "",            // annotation
+                                     "fx",          // file classification
+									 $fileFilter,	// file filter
+                                     "/renderData/shaders" );	// project directory
+
+	// Tool buttons to reload the effect, browse online help, etc.
+    AEGLSLShader_toolLayout( $gAEhwShader_iLayout, true );
+
+    setParent ..;
+
+    //separator -style none;
+
+    // Clean up.  Initialize the controls.
+    setParent ..;
+    setUITemplate -ppt;
+    AEGLSLShader_shaderReplace($sNodeAttr);
+    
+}                                      // AEGLSLShader_shaderNew
+
+
+// This procedure is invoked to connect a given GLSLShader node to the UI
+// controls. If the layout already exists, the Attribute Editor will
+// call this routine instead of AEGLSLShader_shaderNew.
+//
+global proc AEGLSLShader_shaderReplace( string $sNodeAttr )
+{
+    global int $gAEhwShader_iLayout; // IN: AE instance id for callbacks
+
+    string $sNodeName = `match "^[^.]*" $sNodeAttr`;
+    string $sa[];
+    string $s;
+
+	// GLSL Shader file name
+	connectControl -fileName tfFileName $sNodeAttr;
+
+    // Tool buttons to reload the effect, browse online help, etc.
+    AEGLSLShader_toolLayout( $gAEhwShader_iLayout, false );
+    
+}                                      // AEGLSLShader_shaderReplace
+
+////////////////////////////////////////////////////////////////////////
+//   BEGIN: Code adapted from the CgFX plugin by NVidia               //
+////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////
+//                        Utility  procs                              //
+////////////////////////////////////////////////////////////////////////
+
+// Split string at delimiters defined by a regular expression.
+//    Example:
+//        GLSLShader_split( ";x;;;y;", ";" ) returns {"","x","","","y",""}
+//    Note that leading, consecutive, or trailing delimiters give empty
+//    strings, unlike the MEL tokenize() function which strips them:
+//        tokenize( ";x;;;y;", ";", $sa ) yields $sa = {"x","y"}
+global proc string[] GLSLShader_split( string $sText, string $sPattern )
+{
+    string $saResult[];
+    string $sPatTail = $sPattern + ".*";
+    string $s;
+    int    $l, $m, $n;
+    while ( size( $sText ) != $l &&
+            size( $s = `match $sPatTail $sText` ) )
+    {
+        $l = size( $sText );
+        $m = $l - size( $s );
+        $saResult[ $n++ ] = $m ? substring( $sText, 1, $m )
+                               : "";
+        $sText = `substitute $sPattern $s ""`;
+    }
+    $saResult[ $n ] = $sText;
+    return $saResult;
+}                                      // GLSLShader_split
+
+// Substitute values for <name>s in a string.
+//      $sText is a string which may contain angle-bracketed tag
+//          names to be replaced with values from $saDict.  For example,
+//          "123<name>XYZ" could become "123valueXYZ".  Substitution is
+//          not recursive; result text is not re-examined.  Names must be
+//          alphanumeric and non-empty.  Name lookup is case-sensitive.
+//      $saDict is a list of tag names and values, like
+//              {"name","value","name2","value2"}
+//          A default value may precede the name/value pairs, like
+//              {"defaultValue","name","value","name2","value2"}
+global proc string GLSLShader_expandTags( string $sText, string $saDict[] )
+{
+    string $sResult;
+    string $s, $t;
+    int    $bQuote;
+    while ( "" != ( $s = `match "<[a-zA-Z0-9_]+>.*" $sText` ) )
+    {
+        int $i = size( $sText ) - size( $s );
+        if ( $i )
+        {
+            $t = substring( $sText, 1, $i );
+            $bQuote = GLSLShader_hasUnmatchedQuote( $t, $bQuote );
+            $sResult += $t;
+        }
+        $sText = `substitute "<[a-zA-Z0-9_]+>" $s ""`;
+        $t = substring( $s, 2, size( $s ) - size( $sText ) - 1 );     // name
+        for ( $i = size( $saDict ); $i > 1; $i -= 2 )
+            if ( $t == $saDict[ $i - 2 ] )
+                break;
+        if ( $i )                           // name found or default given
+        {
+            $s = $saDict[ $i - 1 ];         // get value or default
+            if ( $bQuote )                  // if within a quoted string
+                $s = encodeString( $s );    // insert backslashes as needed
+        }
+        else                                // name not in dict and no default
+            $s = "<" + $t + ">";            // preserve <name> unchanged
+        $sResult += $s;
+    }
+    return $sResult + $sText;
+}                                      // GLSLShader_expandTags
+
+
+// Return true if string contains an unmatched quote.
+global proc int GLSLShader_hasUnmatchedQuote( string $sText, int $bHasUnmatchedQuote )
+{
+    while ( "" != ( $sText = `match "[\"\\].*" $sText` ) )
+    {
+        if ( substring( $sText, 1, 1 ) == "\\" )      // found backslash
+            $sText = `substitute ".." $sText ""`;     // ignore next char
+        else                                          // found quote
+        {
+            $sText = `substitute "." $sText ""`;
+            $bHasUnmatchedQuote = !$bHasUnmatchedQuote;
+        }
+    }
+    return $bHasUnmatchedQuote;
+}                                      // GLSLShader_hasUnmatchedQuote
+
+
+
+////////////////////////////////////////////////////////////////////////
+//                        "Tools" Controls                            //
+////////////////////////////////////////////////////////////////////////
+
+// Callback when user clicks a tool button.  Invoke the tool.
+global proc AEGLSLShader_toolEval( int $iLayout, string $sCmd )
+{
+    // Substitute file name and node name into the command.
+    string $sNodeName = AEhwShader_beginCallback( $iLayout );
+    string $sLayout = "hwShader_AEinstance" + $iLayout;
+    setParent $sLayout;
+    if(size( $sNodeName ) > 0)
+	{
+		$sCmd = GLSLShader_expandTags( $sCmd, AEGLSLShader_toolTags( $sNodeName ) );
+
+		// Invoke the tool.  We use evalDeferred in case the tool command
+		// is undoable, so undo/redo can display that command instead of
+		// the present button click callback invocation.
+		evalDeferred $sCmd;
+	}
+}                                      // AEGLSLShader_toolEval
+
+
+// Return dictionary of tags and values for tool command expansion.
+//   Caller has done "setParent" so this procedure can query the
+//   contents of UI controls from the proper "GLSL Shader" layout.
+global proc string[] AEGLSLShader_toolTags( string $sNodeName )
+{
+    string $saDict[] = {
+        "file",       "\"" + `GLSLShader -q -fxFile $sNodeName` + "\"",
+        "node",       $sNodeName
+    };
+    return $saDict;
+}                                      // AEGLSLShader_toolEval
+
+
+// Create or update tool buttons.
+global proc AEGLSLShader_toolLayout( int $iLayout, int $bNew )
+{                                      
+	string $saTools[];
+	if ( `optionVar -exists AEGLSLShader_toolSymbolButtons` )
+		$saTools = `optionVar -q AEGLSLShader_toolSymbolButtons`;
+	string $saWhichTool[] = GLSLShader_split( $saTools[0], "\t" );
+	int $nTools = size( $saWhichTool );
+
+	int $iconWidth = 20;
+	
+	if ( $bNew )
+    {
+        string $sPopupCmd = "AEGLSLShader_toolPopup " + $iLayout + " ";
+		
+        string $rowLayoutPath = `rowLayout -nc $nTools -width ($nTools * $iconWidth) rlTools`;
+
+		int $iTool;
+		for ( $iTool = 0; $iTool < $nTools; ++$iTool )
+		{
+			int $col = $iTool + 1;
+			rowLayout -e -columnWidth $col $iconWidth -cat $col "left" 0 $rowLayoutPath;
+			
+			string $sToolName = $saWhichTool[ $iTool ];
+			string $sControlRel = "bTool" + $iTool;
+			
+			// Get the tool definition associated with this button.
+            int $nToolDef = size( $saTools );
+			int $iToolDef;
+			for ( $iToolDef = 1; $iToolDef < $nToolDef; ++$iToolDef )
+				if ( $sToolName == `match "^[^\t]*" $saTools[ $iToolDef ]` )
+					break;
+					
+			string $saArgs[];
+			if ( $iToolDef < $nToolDef )
+				$saArgs = GLSLShader_split( $saTools[ $iToolDef ], "\t" );
+				
+			string $toolIcon = $saArgs[1];
+			string $toolDsc = $saArgs[2];
+			string $toolCmd = $saArgs[3];
+
+			symbolButton -image $toolIcon -width $iconWidth -annotation $toolDsc -command $toolCmd $sControlRel;
+
+			popupMenu -postMenuCommand ( $sPopupCmd + $iTool )
+				-allowOptionBoxes 1
+				pmTool;
+		}
+        setParent ..;
+    }
+    else 
+    {
+        setParent rlTools;
+		string $rowLayoutPath = `setParent -q`;
+
+		int $iTool;
+        for ( $iTool = 0; $iTool < $nTools; ++$iTool )
+        {
+			int $col = $iTool + 1;
+			rowLayout -e -columnWidth $col $iconWidth $rowLayoutPath;
+
+			string $sToolName = $saWhichTool[ $iTool ];
+			string $sControlRel = "bTool" + $iTool;
+
+            // Empty the popup menu.
+            string $sControlAbs = `setParent -q` + "|" + $sControlRel;
+            string $sPopupAbs   = $sControlAbs + "|pmTool";
+            popupMenu -e -deleteAllItems $sPopupAbs;
+
+			string $sToolName = $saWhichTool[ $iTool ];
+			
+			// Get the tool definition associated with this button.
+            int $nToolDef = size( $saTools );
+			int $iToolDef;
+			for ( $iToolDef = 1; $iToolDef < $nToolDef; ++$iToolDef )
+				if ( $sToolName == `match "^[^\t]*" $saTools[ $iToolDef ]` )
+					break;
+					
+			string $saArgs[];
+			if ( $iToolDef < $nToolDef )
+				$saArgs = GLSLShader_split( $saTools[ $iToolDef ], "\t" );
+
+			string $toolIcon = $saArgs[1];
+			string $toolDsc = $saArgs[2];
+			string $toolCmd = $saArgs[3];
+
+			if ( $toolCmd == "" )
+			{
+				if( $iToolDef < $nToolDef )
+					$toolDsc = getPluginResource( "glslShader", "kActionEmptyCommand");
+				else
+					$toolDsc = getPluginResource( "glslShader", "kActionNotAssigned");
+			}
+			else
+			{
+				if ( $toolDsc == "" )
+					$toolDsc = $toolCmd;
+				$toolCmd = "AEGLSLShader_toolEval " + $iLayout 
+						+ " \"" + encodeString( $toolCmd ) + "\"";
+			}
+
+			if ( `symbolButton -exists $sControlRel` )
+				symbolButton -e -image $toolIcon -width $iconWidth -annotation $toolDsc -command $toolCmd $sControlRel;
+			else
+				symbolButton -image $toolIcon -width $iconWidth -annotation $toolDsc -command $toolCmd $sControlRel;
+        }
+
+		string $sControlRel = "bTool" + $iTool;
+		while ( `symbolButton -exists $sControlRel` )
+		{
+			string $sControlAbs = `setParent -q` + "|" + $sControlRel;
+			deleteUI $sControlAbs;
+			++$iTool;
+			$sControlRel = "bTool" + $iTool;
+		};
+        setParent ..;                  // end of rlTools
+    }
+}                                      // AEGLSLShader_toolLayout
+
+// Callback to create popup menu items for a tool button.
+global proc AEGLSLShader_toolPopup( int $iLayout, int $iButton )
+{                                      
+    AEhwShader_beginCallback( $iLayout );
+    setParent rlTools;
+
+    string $sControlRel = "bTool" + $iButton;
+    string $sControlAbs = `setParent -q` + "|" + $sControlRel;
+    string $sPopupAbs   = $sControlAbs + "|pmTool";
+    popupMenu -e -deleteAllItems $sPopupAbs;
+    setParent -menu $sPopupAbs;
+
+    string $sCmd = "AEGLSLShader_toolChoice " + $iLayout + " " + $iButton + " ";
+    string $sOpt = "AEGLSLShader_toolEditor " + $iLayout + " " + $iButton + " ";
+
+	string $label = getPluginResource( "glslShader", "kActionChoose");
+    menuItem -l $label
+             -italicized 1;
+    menuItem -divider 1;
+
+    string $saTools[];
+    if ( `optionVar -exists AEGLSLShader_toolSymbolButtons` )
+        $saTools = `optionVar -q AEGLSLShader_toolSymbolButtons`;
+
+    int $i;
+    for ( $i = 1; $i < size( $saTools ); ++$i )
+    {
+        string $saArgs[] = GLSLShader_split( $saTools[ $i ], "\t" );
+        if ( $saArgs[0] != "" )
+        {
+			string $toolName = $saArgs[0];
+			//string $toolIcon = $saArgs[1];
+			string $toolDsc = $saArgs[2];
+			string $toolCmd = $saArgs[3];
+			
+            menuItem -l $toolName
+                     -ann ( $toolDsc + ":  \"" + $toolCmd + "\"" )
+                     -c ( $sCmd + $i );
+			string $annotation = getPluginResource( "glslShader", "kActionEdit");
+            menuItem -optionBox 1
+                     -ann $annotation
+                     -c ( $sOpt + $i );
+        }
+    }
+
+    menuItem -divider 1;
+	$label = getPluginResource( "glslShader", "kActionNothing");
+	string $annotation = getPluginResource( "glslShader", "kActionNothingAnnotation");
+    menuItem -l $label
+             -italicized 1
+             -ann $annotation
+             -c ( $sCmd + "0" );
+    menuItem -divider 1;
+	$label = getPluginResource( "glslShader", "kActionNew");
+	$annotation = getPluginResource( "glslShader", "kActionNewAnnotation");
+    menuItem -l $label
+             -ann $annotation
+             -c ( $sOpt + "0" );
+}                                      // AEGLSLShader_toolPopup
+
+
+// Callback when user chooses an item from a tool button's popup menu.
+global proc AEGLSLShader_toolChoice( int $iLayout, int $iButton, int $iTool )
+{                                      
+    AEhwShader_beginCallback( $iLayout );
+
+    // Get tool definitions and button assignments.
+    string $saTools[] = `optionVar -q AEGLSLShader_toolSymbolButtons`;
+
+    // Associate the button with the chosen tool.
+    string $sToolArgs[];
+    if ( $iTool )
+        $sToolArgs = GLSLShader_split( $saTools[ $iTool ], "\t" );
+    string $saWhichTool[] = GLSLShader_split( $saTools[0], "\t" );
+    $saWhichTool[ $iButton ] = $sToolArgs[0];
+    $saTools[0] = "";
+	int $nTools = size( $saWhichTool );
+	int $i;
+	for ( $i = 0; $i < $nTools; ++$i)
+	{
+		if ( $saWhichTool[$i] != "" )
+		{
+			if ( $saTools[0] != "" )
+				$saTools[0] = $saTools[0] + "\t";
+			$saTools[0] = $saTools[0] + $saWhichTool[$i];
+		}
+	}
+
+    // Rebuild the optionVar.
+    optionVar -ca AEGLSLShader_toolSymbolButtons;
+    string $sTool;
+    for ( $sTool in $saTools )
+        optionVar -sva AEGLSLShader_toolSymbolButtons $sTool;
+
+    // Update the tool buttons.
+    AEGLSLShader_toolLayout( $iLayout, false );
+}                                      // AEGLSLShader_toolChoice
+
+
+// Create the tool editor window. 
+global proc AEGLSLShader_toolEditor( int $iLayout, int $iButton, int $iTool )
+{                                       
+    // Retrieve the node name.  
+    string $sNodeName = AEhwShader_beginCallback( $iLayout );
+    string $s; 
+    int    $i;
+
+    // Get the tool definition.
+    string $saArgs[];
+    if ( $iTool &&
+         `optionVar -exists AEGLSLShader_toolSymbolButtons` )
+    {
+        string $saTools[] = `optionVar -q AEGLSLShader_toolSymbolButtons`;
+        $saArgs = GLSLShader_split( $saTools[ $iTool ], "\t" );
+    }
+
+	string $toolName = $saArgs[0];
+	string $toolIcon = $saArgs[1];
+	string $toolDsc = $saArgs[2];
+	string $toolCmd = $saArgs[3];
+
+    // Create the tool editor window.
+    string $sWindow = "AEGLSLShader_toolEditorWindow";
+    if ( `window -exists $sWindow` )
+        deleteUI -window $sWindow;
+	string $label = getPluginResource( "glslShader", "kActionEditorTitle");
+    window -title $label
+           -resizeToFitChildren 1
+           $sWindow;
+
+    setUITemplate -pst attributeEditorTemplate;
+    columnLayout -adj 1 clMain;
+    separator;
+
+    string $sCallback = "AEGLSLShader_toolEditorUpdate " +
+                            $iLayout + " " + $iButton + " ";
+
+    columnLayout -adj 1;
+		$label = getPluginResource( "glslShader", "kActionEditorName");
+        string $tfgName = `textFieldGrp -l $label
+                                        -tx $toolName
+                                        -cc ( $sCallback + "name" )
+                                        tfgName`;
+		$label = getPluginResource( "glslShader", "kActionEditorImageFile");
+        string $tfgIcon = `textFieldGrp -l $label
+                                        -tx $toolIcon
+                                        -cc ( $sCallback + "icon" )
+                                        tfgIcon`;
+		$label = getPluginResource( "glslShader", "kActionEditorDescription");
+        string $tfgDesc = `textFieldGrp -l $label
+                                        -tx $toolDsc
+                                        -cc ( $sCallback + "desc" )
+                                        tfgDesc`;
+        formLayout flCmd;
+			$label = getPluginResource( "glslShader", "kActionEditorCommands");
+            text -l $label
+                 txCmd;
+            string $sfCmd = `scrollField -h 65
+                                         -w 280
+                                         -tx ( $toolCmd + "\n" )
+                                         -cc ( $sCallback + "cmd" )
+                                         -keyPressCommand ( $sCallback + "kpc" )
+                                         -wordWrap 1
+                                         -insertionPosition 1
+                                         sfCmd`;
+            popupMenu pmCmd;
+            {
+				$label = getPluginResource( "glslShader", "kActionEditorInsertVariable");
+                menuItem -l $label
+                         -italicized 1;
+                menuItem -divider 1;
+                string $s1 = "scrollField -e -it \"";
+                string $s2 = "\" " + $sfCmd + "; " + $sCallback + "kpc";
+                string $saTags[];
+                string $sa[] = AEGLSLShader_toolTags( $sNodeName );
+                for ( $i = size( $sa ); $i > 1; $i -= 2 )
+                    $saTags[ size( $saTags ) ] =
+                        "<" + $sa[ $i - 2 ] + ">\t" + $sa[ $i - 1 ];
+                $saTags = sort( $saTags );
+                for ( $s in $saTags )
+                {
+                    $sa = GLSLShader_split( $s, "\t" );
+                    menuItem -l   $sa[0] 
+                             -ann ( $sa[0] + ":  " + $sa[1] )
+                             -c   ( $s1 + encodeString( $sa[0] ) + $s2 );
+                }
+            }
+        setParent ..;
+        formLayout -e
+                   -attachNone         txCmd left
+                   -attachOppositeForm txCmd right  -129
+                   -attachForm         txCmd top    4 
+                   -attachForm         sfCmd top    2 
+                   -attachForm         sfCmd bottom 2 
+                   -attachControl      sfCmd left   4 txCmd
+                   -attachForm         sfCmd right  10
+                   flCmd;
+    setParent ..;
+
+    separator;
+    formLayout flButtons;
+		$label = getPluginResource( "glslShader", "kActionEditorSave");
+        button -l $label
+               -c ( $sCallback + "save" )
+               -h 26 -w 68
+               -enable 0
+               bSave;
+		$label = getPluginResource( "glslShader", "kActionEditorCreate");
+        button -l $label
+               -c ( $sCallback + "save" )
+               -h 26 -w 68
+               -enable 0
+               bCreate;
+		$label = getPluginResource( "glslShader", "kActionEditorDelete");
+        button -l $label
+               -c ( $sCallback + "delete" )
+               -enable ( $iTool > 0 )
+               -h 26 -w 68
+               bDelete;
+		$label = getPluginResource( "glslShader", "kActionEditorClose");
+        button -l $label
+               -c ( "deleteUI -window " + $sWindow )
+               -h 26 -w 68
+               bClose;
+    setParent ..;
+    formLayout -e
+               -attachForm         bSave   top    0 
+               -attachForm         bCreate top    0 
+               -attachForm         bDelete top    0 
+               -attachForm         bClose  top    0 
+               -attachForm         bSave   bottom 0 
+               -attachForm         bCreate bottom 0 
+               -attachForm         bDelete bottom 0 
+               -attachForm         bClose  bottom 0 
+               -attachOppositeForm bSave   right  -132
+               -attachControl      bCreate left   2  bSave  
+               -attachControl      bDelete left   2  bCreate
+               -attachControl      bClose  left   2  bDelete
+               flButtons;
+    separator;
+
+    setUITemplate -ppt;
+    setParent ..;                      // end of clMain
+    showWindow $sWindow;
+
+    // Set focus to first empty field if any, else to the command field.
+    // Doesn't take effect if done here, so use evalDeferred.
+    $s = ( $saArgs[0] == "" ) ? $tfgName
+       : ( $saArgs[1] == "" ) ? $tfgIcon
+       : ( $saArgs[2] == "" ) ? $tfgDesc
+       :                        $sfCmd;
+    evalDeferred ( "setFocus " + $s );
+}                                      // AEGLSLShader_toolEditor
+
+
+// Callback for tool editor window events.
+global proc AEGLSLShader_toolEditorUpdate( int $iLayout, int $iButton, string $sEvent )
+{                                       
+    int    $i;
+    string $s;
+
+    // Get tool property values from the tool editor window.
+    setParent AEGLSLShader_toolEditorWindow;
+    string $saArgs[];
+    $saArgs[0] = `textFieldGrp -q -tx tfgName`;
+    $saArgs[1] = `textFieldGrp -q -tx tfgIcon`;
+    $saArgs[2] = `textFieldGrp -q -tx tfgDesc`;
+    $saArgs[3] = `scrollField  -q -tx sfCmd`;
+
+    // Strip leading and trailing whitespace.  Remove tabs.
+    for ( $i = 0; $i < 4; ++$i )
+    {
+        $saArgs[ $i ] = substitute( "^[ \t\n\r]*", $saArgs[ $i ], "" );
+        $saArgs[ $i ] = substitute( "[ \t\n\r]*$", $saArgs[ $i ], "" );
+        while ( `match "\t" $saArgs[ $i ]` != "" )    
+            $saArgs[ $i ] = `substitute "\t" $saArgs[ $i ] " "`;              
+    }
+
+    // Get saved tool definitions.
+    string $saTools[];
+    if ( `optionVar -exists AEGLSLShader_toolSymbolButtons` )
+        $saTools = `optionVar -q AEGLSLShader_toolSymbolButtons`;
+
+    // Look for a tool definition matching the specified name.
+    string $sName = $saArgs[0];
+    int    $nTool = size( $saTools );
+    int    $iTool;
+    for ( $iTool = 1; $iTool < $nTool; ++$iTool )
+        if ( $sName == `match "^[^\t]*" $saTools[ $iTool ]` )
+            break;
+
+    int    $bFound  = ( $iTool < $nTool );
+    int    $bCommit = false;
+    string $saWhichTool[];
+   
+    // Delete
+    if ( $sEvent == "delete" &&
+         $bFound )
+    {
+        $saTools[ $iTool ] = "";
+
+        // Remove from button->tool map.
+        $saWhichTool = GLSLShader_split( $saTools[0], "\t" );
+        for ( $iButton = 0; $iButton < size( $saWhichTool ); ++$iButton )
+            if ( $saWhichTool[ $iButton ] == $sName )
+                $saWhichTool[ $iButton ] = "";
+        $saTools[0] = "";
+
+        // Set new control state.
+        $bCommit = true;
+        $bFound  = false;
+    }
+
+    // Ok to save or create?
+    int $bCanSave = ( $sName != "" );
+    if ( $bFound )
+    {
+        string $saSavedArgs[] = GLSLShader_split( $saTools[ $iTool ], "\t" );
+        if ( $saArgs[0] == $saSavedArgs[0] && 
+             $saArgs[1] == $saSavedArgs[1] && 
+             $saArgs[2] == $saSavedArgs[2] && 
+             $saArgs[3] == $saSavedArgs[3] )
+            $bCanSave = false;
+    }
+
+    // Save or create
+    if ( $bCanSave &&
+         $sEvent == "save" )
+    {
+        $saTools[ $iTool ] = $sName + "\t" + $saArgs[1] + "\t" + $saArgs[2] + "\t" + $saArgs[3];
+
+        // Assign this tool to the specified button.
+        $saWhichTool = GLSLShader_split( $saTools[0], "\t" );
+        $saWhichTool[ $iButton ] = $sName;
+
+        // Sort the definitions
+        $saTools[0] = "";
+        $saTools = sort( $saTools );
+        $bCommit = true;
+
+        // Set new control state.
+        $bFound   = true;
+        $bCanSave = false;
+    }
+
+    // Rebuild the optionVar and update the tool buttons.
+    if ( $bCommit )
+    {
+		string $tools;
+		int $nTools = size($saWhichTool);
+		int $i;
+		for ( $i = 0; $i < $nTools; ++$i )
+		{
+			if ( $saWhichTool[$i] != "" )
+			{
+				if ( $tools != "" )
+					$tools = $tools + "\t";
+				$tools = $tools + $saWhichTool[$i];
+			}
+		}
+		
+        optionVar -ca  AEGLSLShader_toolSymbolButtons
+                  -sva AEGLSLShader_toolSymbolButtons ( $tools );
+        for ( $s in $saTools )
+            if ( $s != "" )
+                optionVar -sva AEGLSLShader_toolSymbolButtons $s;
+
+        AEGLSLShader_toolLayout( $iLayout, false );
+    }
+
+    // Update the tool editor window.
+    button -e 
+           -enable ( $bCanSave && $bFound )
+           bSave;
+    button -e 
+           -enable ( $bCanSave && !$bFound )
+           bCreate;
+    button -e
+           -enable $bFound
+           bDelete;
+    if ( $sEvent != "kpc" )
+    {
+        textFieldGrp -e -tx $sName     tfgName;
+        textFieldGrp -e -tx $saArgs[1] tfgIcon;
+		textFieldGrp -e -tx $saArgs[2] tfgDesc;
+        scrollField  -e -tx $saArgs[3] sfCmd;
+    }
+}                                      // AEGLSLShader_toolEditorUpdate
+
+////////////////////////////////////////////////////////////////////////
+//   END: Code adapted from the CgFX plugin by NVidia                 //
+////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////
+//                        "Technique" Controls                        //
+////////////////////////////////////////////////////////////////////////
+
+// Setup the technique UI (probably for the first time)
+//
+global proc AEGLSLShader_techniqueNew( string $sNodeAttr )
+{
+    global int $gAEhwShader_iLayout; // IN: AE instance id for callbacks
+
+    // Technique
+    AEGLSLShader_techniqueReplace( $sNodeAttr );
+}                                      // AEGLSLShader_shaderNew
+
+
+// Move our technique UI over to the specified node/attr
+//
+global proc AEGLSLShader_techniqueReplace( string $sNodeAttr )
+{
+	global int $gAEhwShader_iLayout; // IN: AE instance id for callbacks
+
+	AEGLSLShader_techniqueLayout( $sNodeAttr );
+	
+	string $parent = `setParent -q`;
+
+    // When "technique" attribute is changed update our technique list
+	// Use evalDeferred to avoid trying to replace the scriptJob from inside a callback
+	// from the scriptJob (as you can't/shouldn't try and replace a running script)
+    string $sNodeName = `match "^[^.]*" $sNodeAttr`;
+    scriptJob -parent rbgTechniqueRow
+              -killWithScene
+              -compressUndo 1
+              -attributeChange ( $sNodeName + ".technique" ) ( "evalDeferred( \"setParent " + $parent + "; AEGLSLShader_techniqueUpdate " + $gAEhwShader_iLayout + "\")" );
+	scriptJob -parent rbgTechniqueRow
+              -killWithScene
+              -compressUndo 1
+              -attributeChange ( $sNodeName + ".techniques" ) ( "evalDeferred( \"setParent " + $parent + "; AEGLSLShader_techniqueLayout " + $sNodeAttr + "\")" );
+}                                      // AEGLSLShader_techniqueReplace
+
+
+// Create "Technique" radio buttons
+//
+global proc AEGLSLShader_techniqueLayout( string $sNodeAttr )
+{
+	string $sNodeName = `match "^[^.]*" $sNodeAttr`;
+
+    // Get list of technique names defined in the current GLSL Shader file.
+    string $saTechniques[] = `getAttr ( $sNodeName + ".techniques" )`;
+    int    $nTechnique = size( $saTechniques );
+    int $actualNTechniques = $nTechnique;
+    if ( !$nTechnique )
+    {
+        $saTechniques[0] = getPluginResource( "glslShader", "kNoneDefined");
+        $nTechnique = 1;
+    }
+
+    // Same command for all choices in dropdown:
+    string $sCmd = "AEGLSLShader_techniqueChoice " + $sNodeName + " \"#1\"";
+
+	string $parent = `setParent -q`;
+
+	string $rbgTechniqueRowRel = "rbgTechniqueRow";
+	string $rbgTechniqueRowAbs = $parent + "|" + $rbgTechniqueRowRel;
+	
+    // Clear old dropdown menu.
+    if ( `rowLayout -ex $rbgTechniqueRowAbs` ) {
+        deleteUI $rbgTechniqueRowAbs;
+    }
+    
+    // Create menu:
+    setUITemplate -pst attributeEditorTemplate;
+    string $row = `rowLayout -nc 2 "rbgTechniqueRow"`;
+    
+    // Label:
+	string $label = getPluginResource( "glslShader", "kTechnique");
+    text -l $label;
+    string $annotation = getPluginResource( "glslShader", "kTechniqueTip");
+    
+    // Dropdown menu:
+    optionMenu -changeCommand $sCmd -ann $annotation "rbgTechniqueMenu";
+   
+    // Menu items:
+    int    $iTechnique;
+    for ( $iTechnique = 0; $iTechnique < $nTechnique; ++$iTechnique )
+    {
+        menuItem -label $saTechniques[ $iTechnique] -parent "rbgTechniqueMenu" $saTechniques[ $iTechnique];
+    }
+    setParent ..;
+    
+    if ( $actualNTechniques ) {
+        string $sActiveTechnique = `getAttr ( $sNodeName + ".technique" )`;
+        if( size( $sActiveTechnique ) > 0 ) {
+            optionMenu -e -v $sActiveTechnique -enable true "rbgTechniqueMenu";
+        }
+    }
+    else
+    {
+        optionMenu -e -enable false "rbgTechniqueMenu";
+    }
+    setUITemplate -ppt;
+}                                      // AEGLSLShader_techniqueLayout
+
+
+// Callback when user chooses a "technique" from the dropdown menu
+//
+global proc AEGLSLShader_techniqueChoice( string $sNodeName, string $sChoice )
+{
+	string $sCmd = "setAttr -type \"string\" " +
+					  $sNodeName + ".technique" +
+					  " \"" + $sChoice + "\"";
+	print ( $sCmd + ";\n" );
+	evalDeferred $sCmd;                // use evalDeferred so Maya will display
+									   //   the setAttr command on undo/redo
+}                                      // AEGLSLShader_techniqueChoice
+
+
+// Callback when value of "technique" attribute changes
+//
+global proc AEGLSLShader_techniqueUpdate( int $iLayout )
+{
+    string $sNodeName = AEhwShader_beginCallback( $iLayout );
+    if( size( $sNodeName ) > 0 )
+    {
+		// Get new value and update the techniques dropdown.
+		string $sActiveTechnique  = `getAttr ( $sNodeName + ".technique" )`;
+		optionMenu -e -v $sActiveTechnique "rbgTechniqueMenu";
+	}
+}
+
+
+////////////////////////////////////////////////////////////////////////
+//                        Description field                           //
+////////////////////////////////////////////////////////////////////////
+
+// Create the description entry
+//
+global proc AEGLSLShader_descriptionNew( string $sNodeAttr )
+{
+    global int $gAEhwShader_iLayout; // IN: AE instance id for callbacks
+    textFieldGrp -l "Description" -editable 0 tfGLSLDescription;
+    AEGLSLShader_descriptionReplace( $sNodeAttr );
+}
+
+// This procedure is invoked to connect a given GLSLShader node to the UI
+// controls. If the layout already exists, the Attribute Editor will
+// call this routine instead of AEGLSLShader_shaderNew.
+//
+global proc AEGLSLShader_descriptionReplace( string $sNodeAttr )
+{
+    global int $gAEhwShader_iLayout; // IN: AE instance id for callbacks
+    string $description = `getAttr $sNodeAttr`;
+	textFieldGrp -e -text $description -visible (size( $description) != 0) tfGLSLDescription;
+
+	// Use evalDeferred to avoid trying to replace the scriptJob from inside a callback
+	// from the scriptJob (as you can't/shouldn't try and replace a running script)
+	scriptJob -parent tfGLSLDescription
+              -replacePrevious
+              -killWithScene
+              -runOnce 1
+              -compressUndo 1
+              -attributeChange ( $sNodeAttr ) ( "evalDeferred( \"AEGLSLShader_descriptionReplace " + $sNodeAttr + "\")" );
+}
+
+
+global proc string AEGLSLShader_sanitizeGroupName( string $uiGroupName )
+{
+	string $retVal = $uiGroupName;
+	string $oldTest = "";
+	while ($retVal != $oldTest)
+	{
+	    $oldTest = $retVal;
+	    $retVal = substitute("[^A-Za-z0-9_]", $retVal, "_");
+	}
+	return $retVal;
+}
+
+global proc AEGLSLShader_lightConnectionUpdate( string $optMenuRow, string $sNodeName, int $iLightIndex)
+{
+	string $optMenu = ($optMenuRow + "|bLight" + $iLightIndex );
+	string $knownLights[] = `optionMenu -q -ils $optMenu`;
+	string $lightInfoList[] = `GLSLShader $sNodeName -q -li`;
+
+	string $sanitizedLightName = AEGLSLShader_sanitizeGroupName($lightInfoList[$iLightIndex * 2]);
+	string $sConnectionName = `GLSLShader  $sNodeName  -lcs $sanitizedLightName`;
+	string $useImplicitName = ( $sNodeName + "." + $sanitizedLightName + "_use_implicit_lighting" );
+
+	if (getAttr($useImplicitName)) {
+		string $value = getPluginResource( "glslShader", "kLightConnectionImplicit");
+		// Transfer the currently selected item's tool tip to the option menu:
+		string $annotation = getPluginResource( "glslShader", "kLightConnectionImplicitTip");
+		optionMenu -e -v $value -ann $annotation $optMenu;
+
+		string $implicitStatusLabel = "";
+		if ($sConnectionName == "") 
+			$implicitStatusLabel += getPluginResource( "glslShader", "kLightConnectionImplicitNone");
+		else
+			$implicitStatusLabel += $sConnectionName;
+		$implicitStatusLabel += " ";
+
+		// Update cnx label:
+		string $lightCnxLabelRel =  ($optMenuRow + "|bLightCnxLabel" + $iLightIndex );
+		text -e -visible true -l $implicitStatusLabel -width 95 $lightCnxLabelRel;
+		// Update dropdown width:
+		string $lightCnxDropdownRel =  ($optMenuRow + "|bLight" + $iLightIndex );
+		optionMenu -e -width 90 $lightCnxDropdownRel;
+		rowLayout -e -cw 2 105 -cw 3 95 -adj 3  $optMenuRow;
+	} else {
+		if (`stringArrayContains $sConnectionName $knownLights`) {
+			string $annotation = getPluginResource( "glslShader", "kLightConnectionExplicitTip");
+			optionMenu -e -v $sConnectionName -ann $annotation $optMenu;
+		} else if ($sConnectionName == "") {
+			string $value = getPluginResource( "glslShader", "kLightConnectionNone");
+			string $annotation = getPluginResource( "glslShader", "kLightConnectionNoneTip");
+			optionMenu -e -v $value -ann $annotation $optMenu;
+		} else {
+			// Highly unsupported, but still show:
+			menuItem -label $sConnectionName -parent $optMenu $sConnectionName;
+			string $annotation = getPluginResource( "glslShader", "kLightConnectionExplicitTip");
+			optionMenu -e -v $sConnectionName -ann $annotation $optMenu;
+		}
+		// Update cnx label:
+		string $lightCnxLabelRel =  ($optMenuRow + "|bLightCnxLabel" + $iLightIndex );
+		text -e -visible false -width 1 -l "" $lightCnxLabelRel;
+		// Update dropdown width:
+		string $lightCnxDropdownRel =  ($optMenuRow + "|bLight" + $iLightIndex );
+		optionMenu -e -width 199 $lightCnxDropdownRel;
+		rowLayout -e -cw 2 199 -cw 3 1 -adj 2 $optMenuRow;
+	}
+
+	// Update navigation button:
+	string $navButton = ($optMenuRow + "|bLightNavButton" + $iLightIndex );
+	iconTextButton -e -visible (size($sConnectionName) > 0) -ann $sConnectionName $navButton;
+}
+
+// Finds out if the AE is actually looking at a GLSLShader and refreshes the implicit light dropdowns:
+global proc AEGLSLShader_lightConnectionUpdateAll()
+{
+	string $jobs[] = `scriptJob -listJobs`;
+	int $i = 0;
+	for ($i = 0; $i < size($jobs); ++$i) {
+	    string $job = $jobs[$i];
+	    if (match("AEGLSLShader_lightConnectionUpdate",$job) != "" && match("attributeChange",$job) != "" )
+	    {
+		string $params[] = stringToStringArray($job, " ");
+		int $j = 0;
+		for ($j = 0; $j < size($params); ++$j)
+		{
+		    $param = $params[$j];
+		    if (match("AEGLSLShader_lightConnectionUpdate",$param) != "")
+		    {
+			string $menuCtrlRow = $params[$j+1];
+			string $nodeName = $params[$j+2];
+			string $lightIndex = match("[0-9]+", $params[$j+3]);
+			eval("AEGLSLShader_lightConnectionUpdate " + $menuCtrlRow + " " + $nodeName + " " + $lightIndex + "\n");
+		    }
+		}
+	    }
+	}
+}
+
+// Create the Light Binding entry
+//
+global proc AEGLSLShader_lightInfoNew( string $sNodeAttr )
+{
+    global int $gAEhwShader_iLayout; // IN: AE instance id for callbacks
+
+	string $sLayoutRel = "explicitLightConnectionLayout";
+    string $sLayoutAbs = `setParent -q` + "|" + $sLayoutRel;
+    int $bReuse = `layout -exists $sLayoutAbs`;
+    if ( $bReuse )
+        setParent $sLayoutRel;
+    else
+    {
+        $label = getPluginResource( "glslShader", "kLightBinding");
+        frameLayout -l $label -cl true $sLayoutRel;
+    }
+    AEGLSLShader_lightInfoReplace( $sNodeAttr );
+}
+
+// This procedure is invoked to connect a given GLSLShader node to the UI
+// controls. If the layout already exists, the Attribute Editor will
+// call this routine instead of AEGLSLShader_shaderNew.
+//
+global proc AEGLSLShader_lightInfoReplace( string $sNodeAttr )
+{
+	global int $gAEhwShader_iLayout; // IN: AE instance id for callbacks
+	string $lightInfo = `getAttr $sNodeAttr`;
+	string $sNodeName = `match "^[^.]*"  $sNodeAttr`;
+	string $lightInfoList[] = `GLSLShader $sNodeName -q -li`;
+
+	// Need to check the light index
+	setParent explicitLightConnectionLayout;
+	string $sExplicitLightConnRel = "lightButtons";
+	string $sExplicitLightConnAbs = `setParent -q` + "|" + $sExplicitLightConnRel;
+	if( `layout -exists $sExplicitLightConnAbs`)
+		deleteUI $sExplicitLightConnAbs;
+
+	int    $nLights = size( $lightInfoList );
+	if($nLights > 0)
+	{
+		setUITemplate -pst attributeEditorTemplate;
+
+		columnLayout -adj true -parent explicitLightConnectionLayout $sExplicitLightConnRel;
+
+		int $iCurrLight;
+		int $iCurrLightIndex = 0;
+		for ( $iCurrLight = 0; $iCurrLight < $nLights; ++$iCurrLight )
+		{
+			string $rowLayoutName = $sExplicitLightConnAbs + "|Row" + $iCurrLightIndex;
+			string $sFullPath = `rowLayout -nc 4 -adj 3 -parent $sExplicitLightConnAbs $rowLayoutName`;
+
+			// Label:
+			string $lightName = $lightInfoList[ $iCurrLight ];
+			text -l $lightName -parent $sFullPath;
+
+			// Light type:
+			++$iCurrLight;
+			string $sLightType = $lightInfoList[ $iCurrLight ];
+
+			// Already connected?
+			string $sConnectionName = `GLSLShader  $sNodeName  -lcs $lightName`;
+
+
+			string $sControlRel = ( "bLight" + $iCurrLightIndex );
+
+			// Dropdown menu:
+			string $sCmd = "AEGLSLShader_lightChoice " + $sNodeName + " " + AEGLSLShader_sanitizeGroupName($lightName) + " \"#1\"";
+			string $optMenu = `optionMenu -changeCommand $sCmd -width 105 -parent $sFullPath $sControlRel`;
+			string $label = getPluginResource( "glslShader", "kLightConnectionNone");
+			// Annotations are not currently shown  when browsing the menu. Still add them in case this gets fixed.
+			string $annotation = getPluginResource( "glslShader", "kLightConnectionNoneTip");
+			string $value = $label;
+			menuItem -label $label -ann $annotation -parent $optMenu $value;
+			$label = getPluginResource( "glslShader", "kLightConnectionImplicit");
+			$annotation = getPluginResource( "glslShader", "kLightConnectionImplicitTip");
+			$value = $label;
+			menuItem -label $label -ann $annotation -parent $optMenu $value;
+
+			// Populate menu:
+			string $compatibleLights[];
+			if ($sLightType == "invalid" || $sLightType == "undefined") {
+				$compatibleLights = `listTransforms "-lt"`;
+			} else if ($sLightType == "spot") {
+				$compatibleLights = `listTransforms "-type spotLight"`;
+			} else if ($sLightType == "point") {
+				$compatibleLights = `listTransforms "-type pointLight"`;
+			} else if ($sLightType == "directional") {
+				$compatibleLights = `listTransforms "-type directionalLight"`;
+			} else if ($sLightType == "ambient") {
+				$compatibleLights = `listTransforms "-type ambientLight"`;
+			}
+			$annotation = getPluginResource( "glslShader", "kLightConnectionExplicitTip");
+
+			int $nCompatibleLights = size( $compatibleLights );
+			int $iCompatibleLight;
+			for ($iCompatibleLight = 0; $iCompatibleLight < $nCompatibleLights; ++$iCompatibleLight)
+			{
+
+				menuItem -label $compatibleLights[$iCompatibleLight] -ann $annotation -parent $optMenu $compatibleLights[$iCompatibleLight];
+			}
+
+			string $sanitizedLightName = AEGLSLShader_sanitizeGroupName($lightName);
+			
+			// Light connection label:
+			string $lightCnxLabelRel =  ( "bLightCnxLabel" + $iCurrLightIndex );
+			text -l "" -parent $sFullPath -width 1 -align "right" -bgc 0.36 0.4 0.45 -visible false $lightCnxLabelRel;
+
+			// Navigation button:
+			string $lightButtonRel =  ( "bLightNavButton" + $iCurrLightIndex );
+			string $navButton = `iconTextButton -image "navButtonConnected.png"
+			       -c ( "showEditor `GLSLShader " + $sNodeName + " -lcs " + $sanitizedLightName + "`;" )
+			       -enable 1
+			       -parent $sFullPath
+			       $lightButtonRel`;
+			
+			// Select current light connections:
+			AEGLSLShader_lightConnectionUpdate( $sFullPath, $sNodeName, $iCurrLightIndex);
+			
+			// We also need to update the dropdown whenever the connected light changes:
+			string $connectedLightName = ( $sanitizedLightName + "_connected_light" );
+			scriptJob -parent $optMenu
+				-killWithScene
+				-compressUndo 1
+				-connectionChange ($sNodeName + "." + $connectedLightName ) 
+				( "evalDeferred( \"AEGLSLShader_lightConnectionUpdate " + $sFullPath + " "+ $sNodeName + " "+ $iCurrLightIndex + "\")" );
+			
+			// Also monitor the use implicit boolean for this light:
+			string $useImplicitName = ( $sanitizedLightName + "_use_implicit_lighting" );
+			scriptJob -parent $optMenu
+				-killWithScene
+				-compressUndo 1
+				-attributeChange ($sNodeName + "." + $useImplicitName ) 
+				( "evalDeferred( \"AEGLSLShader_lightConnectionUpdate " + $sFullPath + " "+ $sNodeName + " "+ $iCurrLightIndex + "\")" );
+
+			$iCurrLightIndex++;
+		}
+
+		setUITemplate -ppt;
+	}
+
+	// Use evalDeferred to avoid trying to replace the scriptJob from inside a callback
+	// from the scriptJob (as you can't/shouldn't try and replace a running script)
+	scriptJob -parent explicitLightConnectionLayout
+		-replacePrevious
+		-killWithScene
+		-runOnce 1
+		-compressUndo 1
+		-attributeChange ( $sNodeName + ".shader" ) ( "evalDeferred( \"AEGLSLShader_lightInfoReplace " + $sNodeAttr + "\")" );
+}
+
+// Callback when user chooses an item from the light connections dropdown menus
+//
+global proc AEGLSLShader_lightChoice( string $sNodeName, string $lightName, string $sChoice )
+{
+	string $sCmd;
+	string $useImplicitName = ( $sNodeName + "." + $lightName + "_use_implicit_lighting" );
+	if ($sChoice == getPluginResource( "glslShader", "kLightConnectionNone")) {
+		$sCmd = "GLSLShader " + $sNodeName + " -d " + $lightName + "; setAttr " + $useImplicitName + " 0"  ;
+	} else if ($sChoice == getPluginResource( "glslShader", "kLightConnectionImplicit")) {
+		$sCmd = "GLSLShader " + $sNodeName + " -d " + $lightName + "; setAttr " + $useImplicitName + " 1"  ;
+	} else {
+		$sCmd = "GLSLShader " + $sNodeName + " -cl " + $lightName + " " + $sChoice + "; setAttr " + $useImplicitName + " 0"  ;
+	}
+	print ( $sCmd + ";\n" );
+	evalDeferred $sCmd;	// use evalDeferred so Maya will display
+				//   the setAttr command on undo/redo
+}                                      // AEGLSLShader_lightChoice
+////////////////////////////////////////////////////////////////////////
+//                        Diagnostics field                           //
+////////////////////////////////////////////////////////////////////////
+
+
+// Create the diagnostics box
+//
+global proc AEGLSLShader_diagnosticsNew( string $sNodeAttr )
+{
+    global int $gAEhwShader_iLayout; // IN: AE instance id for callbacks
+    scrollField -height 100 -editable 0 tfGLSLDiagnostics;
+    AEGLSLShader_diagnosticsReplace( $sNodeAttr );
+}
+
+
+// This procedure is invoked to connect a given GLSLShader node to the UI
+// controls. If the layout already exists, the Attribute Editor will
+// call this routine instead of AEGLSLShader_shaderNew.
+//
+global proc AEGLSLShader_diagnosticsReplace( string $sNodeAttr )
+{
+    global int $gAEhwShader_iLayout; // IN: AE instance id for callbacks
+	scrollField -e -text `getAttr $sNodeAttr` tfGLSLDiagnostics;
+
+	// Use evalDeferred to avoid trying to replace the scriptJob from inside a callback
+	// from the scriptJob (as you can't/shouldn't try and replace a running script)
+	scriptJob -parent tfGLSLDiagnostics
+              -replacePrevious
+              -killWithScene
+              -runOnce 1
+              -compressUndo 1
+              -attributeChange ( $sNodeAttr ) ( "evalDeferred( \"AEGLSLShader_diagnosticsReplace " + $sNodeAttr + "\")" );
+}
+
+
+////////////////////////////////////////////////////////////////////////
+//          Uniform Param layout using explicit UI grouping           //
+////////////////////////////////////////////////////////////////////////
+
+global proc AEGLSLShader_UniformParameters( string $node)
+{
+    // Shader Data
+	string $label = getPluginResource( "glslShader", "kShaderParameters");
+    editorTemplate -beginLayout $label -collapse false;
+    editorTemplate -callCustom AEGLSLShader_uniformParameterLayout
+                               AEGLSLShader_uniformParameterLayout
+                               uniformParameters;
+    editorTemplate -endLayout;
+    
+    // Surface Data
+	$label = getPluginResource( "glslShader", "kSurfaceData");
+    editorTemplate -beginLayout $label -collapse false;
+    editorTemplate -callCustom AEhwShader_varyingParameterLayout
+                               AEhwShader_varyingParameterLayout
+                               varyingParameters;
+    editorTemplate -endLayout;
+
+}
+
+// Create "Shader Data" layout, or recycle an
+//   existing layout for use with another hwShader node.
+global proc AEGLSLShader_uniformParameterLayout( string $sNodeAttr )
+{
+    global int $gAEhwShader_iLayout; // IN: AE template instance id
+    global int $gAEhwShader_bNew;    // IN: true => build new controls 
+
+    // No action needed if our layout is already associated with the given node.
+    if ( !$gAEhwShader_bNew )
+        return;
+	
+    // Find or create layout.
+    setUITemplate -pst attributeEditorTemplate;
+    string $sLayoutRel = "GLSLShaderUniformLayout";
+    string $sLayoutAbs = `setParent -q` + "|" + $sLayoutRel;
+    int $bReuse = `layout -exists $sLayoutAbs`;
+    if ( $bReuse )
+        setParent $sLayoutRel;
+    else
+        columnLayout -adj 1
+                     -visible 0
+                     $sLayoutRel;
+    
+    AEGLSLShader_uniformParameterGroupLayout( $gAEhwShader_iLayout );
+
+    // Clean up.
+    setParent ..;                
+    setUITemplate -ppt;
+    layout -e -visible 1 $sLayoutRel;
+
+    // Update all fields when uniform parameter list changed.
+    string $cmd = "AEGLSLShader_uniformParameterGroupLayout " + $gAEhwShader_iLayout;
+    scriptJob -parent $sLayoutRel
+              -replacePrevious
+              -killWithScene
+              -compressUndo 1
+              -attributeChange $sNodeAttr $cmd;
+} 
+
+global proc AEGLSLShader_uniformParameterGroupLayout( int $iLayout )
+{
+    string $sNodeName = AEhwShader_beginCallback( $iLayout );
+    setParent GLSLShaderUniformLayout;
+    
+    string $uiGroupList[] = `GLSLShader $sNodeName -q -lg`;
+    string $closedGroups[];
+    clear($closedGroups);
+    int    $nUIGroups = size( $uiGroupList );
+    int $iCurrUIGroup;
+
+    // Find or create layout.
+    string $sLayoutRel = "hwShaderUniformFrame";
+    string $sLayoutAbs = `setParent -q` + "|" + $sLayoutRel;
+    if( `layout -exists $sLayoutAbs`)
+    {
+        // Preserve previous group open/close state:
+        for ( $iCurrUIGroup = 0; $iCurrUIGroup < $nUIGroups; ++$iCurrUIGroup )
+        {
+            string $sFrameRel = ("hwShaderUniformFrame|hwShaderUniformFrame" + AEGLSLShader_sanitizeGroupName($uiGroupList[ $iCurrUIGroup ]));
+            string $sFrameAbs = `setParent -q` + "|" + $sFrameRel;
+            if( `layout -exists $sFrameAbs`)
+            {
+                int $panelIsClosed = `frameLayout -q -cl  $sFrameAbs`;
+                if ($panelIsClosed) {
+                    stringArrayInsertAtIndex(size($closedGroups), $closedGroups, $uiGroupList[ $iCurrUIGroup ]);
+                }
+            }
+            else
+            {
+                // The groups do not match exactly, effect is not the same:
+                clear($closedGroups);
+                break;
+            }
+        }
+        deleteUI $sLayoutAbs;
+    }
+
+    columnLayout -adj 1 -visible 0 $sLayoutRel;
+    
+    // If we could not salvage group open/close status, then close the light groups by default:
+    if (size($closedGroups) == 0)
+    {
+        $closedGroups = `GLSLShader $sNodeName -q -li`;
+        // Remove light types:
+        int $lightTypeIndex = size( $closedGroups ) - 1;
+        for ( ; $lightTypeIndex > 0; $lightTypeIndex -= 2 )
+        {
+            stringArrayRemoveAtIndex($lightTypeIndex, $closedGroups);
+        }
+    }
+
+    // Create all UI groups:
+    string $seenParameters[];
+    for ( $iCurrUIGroup = 0; $iCurrUIGroup < $nUIGroups; ++$iCurrUIGroup )
+    {
+        string $uiGroupName = $uiGroupList[ $iCurrUIGroup ];
+        
+        // Find or create layout.
+        string $sFrameRel = ("hwShaderUniformFrame" + AEGLSLShader_sanitizeGroupName($uiGroupName));
+        string $sFrameAbs = `setParent -q` + "|" + $sFrameRel;
+        if( `layout -exists $sFrameAbs`)
+            deleteUI $sFrameAbs;
+        
+        // UI groups that are also light parameters are in closed frames:
+        int $panelIsClosed = stringArrayContains($uiGroupName, $closedGroups);
+        frameLayout -l $uiGroupName -cl $panelIsClosed -cll 1 $sFrameRel;
+        
+        string $handledParameters[] = AEGLSLShader_uniformParameterUpdate($iLayout, $sNodeName, $uiGroupName, $seenParameters );
+        
+        appendStringArray($seenParameters, $handledParameters, size($handledParameters));
+        
+        setParent ..;
+        layout -e -visible 1 $sFrameRel;
+    }    
+
+    // Now show remaining ungrouped parameters:
+    AEGLSLShader_uniformParameterUpdate($iLayout, $sNodeName, "", $seenParameters );
+    
+    setParent ..;
+    layout -e -visible 1 $sLayoutRel;
+}  
+
+global proc string[] AEGLSLShader_uniformParameterUpdate( int $iLayout, string $sNodeName, string $uiGroupName, string $seenParameters[] )
+{
+    string $s;
+    string $handledParameters[];
+
+    // Delete old controls.
+    string $sLayoutRel = ("hwShaderUniformParameterLayout" + AEGLSLShader_sanitizeGroupName($uiGroupName));
+    string $sLayoutAbs = `setParent -q` + "|" + $sLayoutRel;
+    if( `layout -exists $sLayoutAbs`)
+        deleteUI $sLayoutAbs;
+
+    // Create a column layout to hold the new controls.
+    setUITemplate -pst attributeEditorTemplate;
+    columnLayout -adj 1 -visible 0 $sLayoutRel;
+
+    // Get the list of uniform parameters on this shader
+    string $uniformParameterList[];
+    if ( $uiGroupName == "" ) {
+        string $sNodeAttr = $sNodeName + ".uniformParameters";
+        $uniformParameterList = `getAttr $sNodeAttr`;
+    } else {
+        $uniformParameterList = `GLSLShader $sNodeName -lgp $uiGroupName`;
+    }
+    
+    int $nShaderData = size( $uniformParameterList );
+    int $iShaderData = 0;
+    for ( ; $iShaderData < $nShaderData; ++$iShaderData)
+    {
+        string $parameterName = $uniformParameterList[ $iShaderData];
+        if ( !stringArrayContains($parameterName, $seenParameters) ) {
+            AEhwShader_buildUniform( $sNodeName, $parameterName );
+            $handledParameters[ size($handledParameters) ] = $parameterName;
+        }
+    }  // loop over shader parameters
+    
+    // Clean up and make the layout visible.
+    setParent ..;  
+    layout -e -visible 1 $sLayoutRel;
+    setUITemplate -ppt;
+    
+    return $handledParameters;
+}                                      // AEhwShader_uniformParameterUpdate
+
+////////////////////////////////////////////////////////////////////////
+//                    Main "GLSL Shader" Template                     //
+////////////////////////////////////////////////////////////////////////
+
+global int $GLSLShaderTemplateInitialised = 0;
+
+global proc AEGLSLShaderTemplate ( string $node )
+{
+	global int $GLSLShaderTemplateInitialised;
+	if( $GLSLShaderTemplateInitialised == 0)
+	{
+		source "AEhwShaderTemplate.mel";
+		$GLSLShaderTemplateInitialised = 1;
+	}
+
+	AEhwShaderTemplateHeader( $node);
+
+    // Shader Data
+	string $label = getPluginResource( "glslShader", "kShader");
+    editorTemplate -beginLayout $label -collapse false;
+		editorTemplate -callCustom AEGLSLShader_shaderNew
+								   AEGLSLShader_shaderReplace
+								   shader;
+		editorTemplate -callCustom AEGLSLShader_techniqueNew
+								   AEGLSLShader_techniqueReplace
+								   techniques;
+		editorTemplate -callCustom AEGLSLShader_descriptionNew
+								   AEGLSLShader_descriptionReplace
+								   description;
+		editorTemplate -callCustom AEGLSLShader_lightInfoNew
+								   AEGLSLShader_lightInfoReplace
+								   lightInfo;
+    editorTemplate -endLayout;
+
+	AEGLSLShader_UniformParameters( $node);
+
+	$label = getPluginResource( "glslShader", "kDiagnostics");
+    editorTemplate -beginLayout $label -collapse true;
+		editorTemplate -callCustom AEGLSLShader_diagnosticsNew
+								   AEGLSLShader_diagnosticsReplace
+								   diagnostics;
+    editorTemplate -endLayout;
+
+	AEhwShaderTemplateFooter( $node);
+}

@@ -1,0 +1,47 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+// Define polyPrimitiveCreateUI and polyPrimitiveDeleteUI so that the
+// polyPrimitiveCmd plug-in won't complain.
+//
+global proc polyPrimitiveCreateUI()
+{
+}
+global proc polyPrimitiveDeleteUI()
+{
+}
+
+global proc polyPrimitiveCreateUI()
+{
+	global string $gMainPrimitivesMenu;
+
+	if (`menu -exists $gMainPrimitivesMenu`)
+	{
+		if (!`menuItem -exists polyPrimitivesItem`)
+		{
+			//
+			//  Force creation of the menu's menu items.
+			//
+			string $postMenuCmd = `menu -q -pmc $gMainPrimitivesMenu`;
+			catch(eval ($postMenuCmd));
+		}
+
+		if (`menuItem -exists polyPrimitivesItem`)
+		{
+			menuItem -p polyPrimitivesItem -l "Other Primitive" -c "polyPrimitiveWindow"
+				-annotation "Polygon Icosahedron: Create other primitives on the grid"
+				polyPrimitiveWindowItem;
+		}
+	}
+}
+ 

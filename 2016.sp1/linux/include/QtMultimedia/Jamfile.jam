@@ -1,0 +1,28 @@
+AWSubDir TOP platform linuxamd64 Components ExternalLibraries Qt 4.8.6 include QtMultimedia ;
+
+AWInstallHeader QAbstractAudioDeviceInfo : install 3rd ;
+AWInstallHeader QAbstractAudioInput : install 3rd ;
+AWInstallHeader QAbstractAudioOutput : install 3rd ;
+AWInstallHeader QAbstractVideoBuffer : install 3rd ;
+AWInstallHeader QAbstractVideoSurface : install 3rd ;
+AWInstallHeader QAudio : install 3rd ;
+AWInstallHeader QAudioDeviceInfo : install 3rd ;
+AWInstallHeader QAudioEngineFactoryInterface : install 3rd ;
+AWInstallHeader QAudioEnginePlugin : install 3rd ;
+AWInstallHeader QAudioFormat : install 3rd ;
+AWInstallHeader QAudioInput : install 3rd ;
+AWInstallHeader QAudioOutput : install 3rd ;
+AWInstallHeader QVideoFrame : install 3rd ;
+AWInstallHeader QVideoSurfaceFormat : install 3rd ;
+AWInstallHeader QtMultimedia : install 3rd ;
+AWInstallHeader qabstractvideobuffer.h : install 3rd ;
+AWInstallHeader qabstractvideosurface.h : install 3rd ;
+AWInstallHeader qaudio.h : install 3rd ;
+AWInstallHeader qaudiodeviceinfo.h : install 3rd ;
+AWInstallHeader qaudioengine.h : install 3rd ;
+AWInstallHeader qaudioengineplugin.h : install 3rd ;
+AWInstallHeader qaudioformat.h : install 3rd ;
+AWInstallHeader qaudioinput.h : install 3rd ;
+AWInstallHeader qaudiooutput.h : install 3rd ;
+AWInstallHeader qvideoframe.h : install 3rd ;
+AWInstallHeader qvideosurfaceformat.h : install 3rd ;

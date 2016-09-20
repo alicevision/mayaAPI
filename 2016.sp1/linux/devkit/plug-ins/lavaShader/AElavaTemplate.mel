@@ -1,0 +1,38 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+global proc AElavaTemplate( string $nodeName )
+{
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	editorTemplate -beginLayout "Lava Attributes" -collapse 0;
+		editorTemplate -addControl "ColorBase";
+		editorTemplate -addControl "ColorFlame";
+		editorTemplate -addControl "Warp";
+		editorTemplate -addControl "Deformation";
+		editorTemplate -addControl "Turbulence";
+		editorTemplate -addControl "Power";
+		editorTemplate -addControl "Speed";
+		editorTemplate -addControl "Frame";
+	editorTemplate -endLayout;
+
+	editorTemplate -suppress "pointWorld";
+	editorTemplate -suppress "placementMatrix";
+   		
+	// include/call base class/node attributes
+	AEdependNodeTemplate $nodeName;
+	
+	editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}

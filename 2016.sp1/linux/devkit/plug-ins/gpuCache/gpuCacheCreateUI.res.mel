@@ -1,0 +1,72 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+displayString -replace -value "Export All..." m_gpuCacheCreateUI.kExportAll;
+displayString -replace -value "Export Selection..." m_gpuCacheCreateUI.kExportSelection;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCachGLSelectionModeAuto;
+displayString -replace -value "OpenGL Selection Mode:" m_gpuCacheCreateUI.kGpuCachGLSelectionModeLabel;
+displayString -replace -value "GPU Cache" m_gpuCacheCreateUI.kGpuCache;
+displayString -replace -value "Advanced Display Settings" m_gpuCacheCreateUI.kGpuCacheAdvancedDisplaySetting;
+displayString -replace -value "Set All to Automatic" m_gpuCacheCreateUI.kGpuCacheAllAutomatic;
+displayString -replace -value "Read Cache Files in Background" m_gpuCacheCreateUI.kGpuCacheBackgroundReading;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCacheBackgroundReadingAuto;
+displayString -replace -value "Background Reading:" m_gpuCacheCreateUI.kGpuCacheBackgroundReadingLabel;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCacheBackgroundReadingRefreshIntervalAuto;
+displayString -replace -value "milliseconds" m_gpuCacheCreateUI.kGpuCacheBackgroundReadingRefreshIntervalUnitText;
+displayString -replace -value "Background Reading Refresh Interval:" m_gpuCacheCreateUI.kGpuCacheBackgroundReadingRefrsehIntervalLabel;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCacheDisableVertexArraysAuto;
+displayString -replace -value "Disable Vertex Arrays:" m_gpuCacheCreateUI.kGpuCacheDisableVertexArraysLabel;
+displayString -replace -value "Driver Number:" m_gpuCacheCreateUI.kGpuCacheDriver;
+displayString -replace -value "Export the current scene to Alembic file(s)" m_gpuCacheCreateUI.kGpuCacheExportAllAnnot;
+displayString -replace -value "GPU Cache export options" m_gpuCacheCreateUI.kGpuCacheExportAllOptionsAnnot;
+displayString -replace -value "Export the selected object(s) to Alembic file(s)" m_gpuCacheCreateUI.kGpuCacheExportSelectionAnnot;
+displayString -replace -value "GPU Cache export options" m_gpuCacheCreateUI.kGpuCacheExportSelectionOptionsAnnot;
+displayString -replace -value "OpenGL-Based Selection Options" m_gpuCacheCreateUI.kGpuCacheGlSelectionOption;
+displayString -replace -value "GPU Memory in MB:" m_gpuCacheCreateUI.kGpuCacheGpuMemoryAmount;
+displayString -replace -value "Hardware Information" m_gpuCacheCreateUI.kGpuCacheHardwareInfo;
+displayString -replace -value "Ignore UVs on GPU Cache Read/Write" m_gpuCacheCreateUI.kGpuCacheIgnoreUv;
+displayString -replace -value "Import an Alembic file to the current scene as a gpuCache node" m_gpuCacheCreateUI.kGpuCacheImportAnnot;
+displayString -replace -value "GpuCache import options" m_gpuCacheCreateUI.kGpuCacheImportOptionsAnnot;
+displayString -replace -value "Use Main Memory" m_gpuCacheCreateUI.kGpuCacheLowMemUseMem;
+displayString -replace -value "Use Temporary VRAM Buffer" m_gpuCacheCreateUI.kGpuCacheLowMemUseTempVRAMBuffer;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCacheLowVRAMOperationAuto;
+displayString -replace -value "Low VRAM Operation:" m_gpuCacheCreateUI.kGpuCacheLowVRAMOperationLabel;
+displayString -replace -value "Manufacturer:" m_gpuCacheCreateUI.kGpuCacheManufacturer;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCacheMaxNumOfBuffersAuto;
+displayString -replace -value "Maximum Number of GPU Cache Buffers:" m_gpuCacheCreateUI.kGpuCacheMaxNumOfBuffersLable;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCacheMaxVRAMAuto;
+displayString -replace -value "Maximum VRAM for All Cache Buffers:" m_gpuCacheCreateUI.kGpuCacheMaxVRAMForAllLabel;
+displayString -replace -value "MB" m_gpuCacheCreateUI.kGpuCacheMegaBytes;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCacheMinVerticesPerShapeAuto;
+displayString -replace -value "Minimum Vertices Per Shape for GPU Caching:" m_gpuCacheCreateUI.kGpuCacheMinVerticesPerShapeLabel;
+displayString -replace -value "Model:" m_gpuCacheCreateUI.kGpuCacheModel;
+displayString -replace -value "GPU Cache: GPU Cache Preferences" m_gpuCacheCreateUI.kGpuCachePreferences;
+displayString -replace -value "Refresh all GPU cache nodes in the scene" m_gpuCacheCreateUI.kGpuCacheRefreshAllAnnot;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCacheSelectionSurfaceThresholdAuto;
+displayString -replace -value "Surface Threshold until Raster-Based Selection:" m_gpuCacheCreateUI.kGpuCacheSelectionSurfaceThresholdLabel;
+displayString -replace -value "vertices per gpuCache node" m_gpuCacheCreateUI.kGpuCacheSelectionSurfaceThresholdText;
+displayString -replace -value "Use VRAM Buffers" m_gpuCacheCreateUI.kGpuCacheSelectionUseVRAMBuffers;
+displayString -replace -value "Use Vertex Arrays" m_gpuCacheCreateUI.kGpuCacheSelectionUseVertexArrays;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCacheSelectionWireThresholdAuto;
+displayString -replace -value "Wireframe Threshold until Raster-Based Selection:" m_gpuCacheCreateUI.kGpuCacheSelectionWireThresholdLabel;
+displayString -replace -value "vertices per gpuCache node" m_gpuCacheCreateUI.kGpuCacheSelectionWireThresholdText;
+displayString -replace -value "    GPU Cache" m_gpuCacheCreateUI.kGpuCacheTab;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCacheTwoSidedLightingAuto;
+displayString -replace -value "Emulate Two Sided Lighting" m_gpuCacheCreateUI.kGpuCacheTwoSidedLightingEmulation;
+displayString -replace -value "Two Sided Lighting:" m_gpuCacheCreateUI.kGpuCacheTwoSidedLightingLabel;
+displayString -replace -value "OpenGL Two Sided Lighting" m_gpuCacheCreateUI.kGpuCacheTwoSidedLightingOpenGL;
+displayString -replace -value "Use GL Primitives" m_gpuCacheCreateUI.kGpuCacheUseGLPrimitives;
+displayString -replace -value "Use Vertex Arrays" m_gpuCacheCreateUI.kGpuCacheUseVertexArrays;
+displayString -replace -value "Automatic" m_gpuCacheCreateUI.kGpuCacheUvCoordinatesAuto;
+displayString -replace -value "UV Coordinates:" m_gpuCacheCreateUI.kGpuCacheUvCoordinatesLabel;
+displayString -replace -value "VRAM Management" m_gpuCacheCreateUI.kGpuCacheVramManagement;
+displayString -replace -value "Import..." m_gpuCacheCreateUI.kImport;
+displayString -replace -value "Refresh All..." m_gpuCacheCreateUI.kRefreshAll;
+displayString -replace -value "Save Preferences" m_gpuCacheCreateUI.kSaveMsg;
+displayString -replace -value "The gpuCache plug-in is about to refresh preferences windows. Save your changes in the preferences window?" m_gpuCacheCreateUI.kSavePrefsOrNotMsg;
+displayString -replace -value "Your GPU Cache file consists of many objects. To improve Make Live interactivity,\nexport and re-import the GPU cache node using the following steps.\n    Pipeline Cache > GPU Cache > Export Selection...\n    Enable Optimization Hierarchy\n    Set Optimization Threshold value above: ^1s\n    Export\n    Delete the exported GPU Cache node\n    Re-import the exported file as a GPU Cache node (Pipeline Cache > GPU Cache > Import...)" m_gpuCacheCreateUI.kTooManyObjectsInCacheMsg;
+displayString -replace -value "Many objects in GPU cache" m_gpuCacheCreateUI.kTooManyObjectsInCacheTitle;

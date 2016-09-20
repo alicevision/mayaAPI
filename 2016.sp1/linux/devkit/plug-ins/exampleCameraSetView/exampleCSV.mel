@@ -1,0 +1,61 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+//
+//
+//
+//
+// ==========================================================================
+//+
+
+global proc exampleCSV()
+//
+//	Description:
+//
+{
+	string $g__MpTestPrimaryCamera;
+
+	string $window = `window`;
+	string $form = `formLayout`;
+	string $editor = `exampleCameraSetView`;
+	string $column = `columnLayout -adjustableColumn true`;
+
+	//  Set up the window layout attachments.
+	//
+	formLayout -edit
+		-attachForm	$column "top"	0
+		-attachForm	$column "left"   0
+		-attachNone	$column "bottom"
+		-attachNone	$column "right"
+		-attachForm	$editor "top"	0
+		-attachControl $editor "left"   0 $column
+		-attachForm	$editor "bottom" 0
+		-attachForm	$editor "right"  0
+		$form;
+
+	showWindow $window;
+
+	//  Create a camera for the editor.  This particular camera will
+	//  have a close up perspective view of the centre of the ground plane.
+	//
+	string $camera[] = `camera -centerOfInterest 2.450351
+		-position 1.535314 1.135712 1.535314
+		-rotation -27.612504 45 0
+		-worldUp -0.1290301 0.3488592 -0.1290301`;
+
+	$g__MpTestPrimaryCamera = $camera[0];
+
+	//  Attach the camera to the model editor.
+	//
+	exampleCameraSetView -edit -camera $camera[0] $editor;
+	currentTime -edit 10.0;
+	exampleCameraSetView -edit -i $editor;
+	exampleCameraSetView -edit -r $editor;
+}

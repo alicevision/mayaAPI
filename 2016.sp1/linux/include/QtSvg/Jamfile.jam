@@ -1,0 +1,11 @@
+AWSubDir TOP platform linuxamd64 Components ExternalLibraries Qt 4.8.6 include QtSvg ;
+
+AWInstallHeader QGraphicsSvgItem : install 3rd ;
+AWInstallHeader QSvgGenerator : install 3rd ;
+AWInstallHeader QSvgRenderer : install 3rd ;
+AWInstallHeader QSvgWidget : install 3rd ;
+AWInstallHeader QtSvg : install 3rd ;
+AWInstallHeader qgraphicssvgitem.h : install 3rd ;
+AWInstallHeader qsvggenerator.h : install 3rd ;
+AWInstallHeader qsvgrenderer.h : install 3rd ;
+AWInstallHeader qsvgwidget.h : install 3rd ;

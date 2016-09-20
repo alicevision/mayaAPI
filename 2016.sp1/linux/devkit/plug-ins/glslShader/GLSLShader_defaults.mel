@@ -1,0 +1,57 @@
+// requires maya "2013ff06";
+startAttrPreset( "GLSLShader" );
+// This procedural preset provides a way to get back to the default values from the effect file:
+if (`attributeExists "uniformParameters" $gAEAttrPresetCurrentTarget`)
+{
+	// Get all the uniform parameters:
+	string $GLSLShaderPresetUniformAttributes[] = `getAttr ($gAEAttrPresetCurrentTarget + ".uniformParameters")`;
+	
+	// We want to preset all leaf attributes, so we need to convert float2, float3, float4 and compound into leaf attributes:
+	while (size($GLSLShaderPresetUniformAttributes))
+	{
+		// Pop the first attribute:
+		string $GLSLShaderPresetCurrentAttr = $GLSLShaderPresetUniformAttributes[0];
+		stringArrayRemoveAtIndex(0, $GLSLShaderPresetUniformAttributes);
+		
+		// Skip attributes not exposed in the UI:
+		if( `attributeQuery -n $gAEAttrPresetCurrentTarget -h $GLSLShaderPresetCurrentAttr` ==  1)
+			continue;
+		
+		// Skip unsupported types 
+		if (`attributeExists ($GLSLShaderPresetCurrentAttr + "_Type") $gAEAttrPresetCurrentTarget`)
+		{
+			string $GLSLShaderPresetAttrType = `getAttr ($gAEAttrPresetCurrentTarget + "." + $GLSLShaderPresetCurrentAttr + "_Type")`; 
+			switch ( $GLSLShaderPresetAttrType )
+			{
+				case "bool":
+				case "int":
+				case "enum":
+				case "float":
+				case "float2x1":
+				case "float1x2":
+				case "float3x1":
+				case "float1x3":
+				case "float4x1":
+				case "float1x4":
+				case "color3x1":
+				case "color1x3":
+				case "color4x1":
+				case "color1x4":
+					break; // Supported
+				default:        
+					continue; // Unsupported
+			}
+		}
+		
+		string $GLSLShaderPresetChildren[] = `attributeQuery  -node $gAEAttrPresetCurrentTarget -listChildren $GLSLShaderPresetCurrentAttr`;
+		if (size($GLSLShaderPresetChildren)) {
+			// Add the children to the list of attributes to process:
+			$GLSLShaderPresetUniformAttributes = stringArrayCatenate($GLSLShaderPresetChildren, $GLSLShaderPresetUniformAttributes);
+		} else {
+			// This one is a leaf attribute, request a preset blend:
+			float $GLSLShaderPresetDefaultVal[] = `attributeQuery  -node $gAEAttrPresetCurrentTarget -listDefault $GLSLShaderPresetCurrentAttr`;
+			blendAttr $GLSLShaderPresetCurrentAttr $GLSLShaderPresetDefaultVal[0];
+		}
+	}
+}
+endAttrPreset();

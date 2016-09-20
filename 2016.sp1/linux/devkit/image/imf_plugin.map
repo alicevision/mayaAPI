@@ -1,0 +1,66 @@
+/****************************************************************************
+ * Copyright 2014 Autodesk, Inc. All rights reserved.
+ *
+ * Use of this software is subject to the terms of the Autodesk license
+ * agreement provided at the time of installation or download, or which
+ * otherwise accompanies this software in either electronic or hard copy form.
+ ****************************************************************************/
+
+/*
+ * When building IMF plug-ins for Maya, we make sure to export only the
+ * symbols needed to load and interact with the plugin. In particular, this
+ * prevents the plug-ins from exporting symbols coming from static
+ * libaries against which the plug-ins are linked.
+ *
+ * Here's why:
+ *
+ * Plug-ins are written by separate developers. Each of them might
+ * want to use various libraries to implement their plug-ins. At
+ * times, it occurs that plug-ins written by different developers are
+ * using different and "incompatible" versions of the same library. To
+ * support this, we recommend that plug-ins be linked against static
+ * versions of these libraries. And, by hiding the symbols of these
+ * libraries, we prevent the two incompatible versions of the library
+ * from interfering with each others.
+ */
+
+{
+    global:
+		program ;
+		version ;
+		type ;
+		imageKey ;
+		imageExtension ;
+		imageName ;
+		imageDescription ;
+		imageFormatString ;
+		imageNameSyntax ;
+		imageAddExtension ;
+		imageUsage ;
+		imageOrientation ;
+		imageNumberOfLuts ;
+		imageBitsPerLut ;
+		imageBitsPerPaletteEntry ;
+		imageNumberOfChannels ;
+		imageBitsPerChannel ;
+		imageNumberOfMattes ;
+		imageBitsPerMatte ;
+		imageNumberOfZChannels ;
+		imageBitsPerZChannel ;
+		imageSupportsActiveWindow ;
+		imageAccess ;
+		imageMultiFrame ;
+		imageHardLinkDuplicates ;
+		imageSupportRemoteAccess ;
+		imageCapability ;
+		imageCapsAvailUpdate ;
+		imageDone ;
+		imageInit ;
+		imageIsFile ;
+		imageReadOpen ;
+		imageWriteOpen ;
+		imagePrivateUIPopdown ;
+		imagePrivateUIPopup ;
+    local: 
+        *;
+};

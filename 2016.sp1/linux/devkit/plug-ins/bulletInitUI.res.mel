@@ -1,0 +1,98 @@
+// Copyright (C) 1997-2014 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+displayString -replace -value "Add Colliders to Skeleton" m_bulletInitUI.kAddCollider;
+displayString -replace -value "Add a collider to the ragdoll for each selected skeleton joint." m_bulletInitUI.kAddColliderAnnot;
+displayString -replace -value "Collider creation options" m_bulletInitUI.kAddColliderOpt;
+displayString -replace -value "Add Selected" m_bulletInitUI.kAddToRigidSet;
+displayString -replace -value "Add selected objects to the specified rigid sets." m_bulletInitUI.kAddToRigidSetAnnot;
+displayString -replace -value "Create" m_bulletInitUI.kBulletCreate;
+displayString -replace -value "Edit" m_bulletInitUI.kBulletEdit;
+displayString -replace -value "Export" m_bulletInitUI.kBulletExport;
+displayString -replace -value "Bullet Help" m_bulletInitUI.kBulletHelp;
+displayString -replace -value "Open Bullet Documentation" m_bulletInitUI.kBulletHelpAnnot;
+displayString -replace -value "Bullet" m_bulletInitUI.kBulletMenuTitle;
+displayString -replace -value "Solver" m_bulletInitUI.kBulletSolver;
+displayString -replace -value "Active Rigid Body" m_bulletInitUI.kCreateActiveRB;
+displayString -replace -value "Create an active Rigid Body object from the selection" m_bulletInitUI.kCreateActiveRBAnnot;
+displayString -replace -value "Active Rigid Body creation options" m_bulletInitUI.kCreateActiveRBOpt;
+displayString -replace -value "Select Soft Body vertices and an object to act as the anchor" m_bulletInitUI.kCreateAnchorAnnot;
+displayString -replace -value "Passive Rigid Body" m_bulletInitUI.kCreatePassiveRB;
+displayString -replace -value "Create a passive Rigid Body object" m_bulletInitUI.kCreatePassiveRBAnnot;
+displayString -replace -value "Passive Rigid Body creation options" m_bulletInitUI.kCreatePassiveRBOpt;
+displayString -replace -value "Rigid Body Constraint" m_bulletInitUI.kCreateRBConstraint;
+displayString -replace -value "Constrain 1 or 2 selected Rigid Bodies" m_bulletInitUI.kCreateRBConstraintAnnot;
+displayString -replace -value "Rigid Body Constraint options" m_bulletInitUI.kCreateRBConstraintOpt;
+displayString -replace -value "Rigid Set" m_bulletInitUI.kCreateRBSet;
+displayString -replace -value "Create a set of Rigid Body objects from the selection" m_bulletInitUI.kCreateRBSetAnnot;
+displayString -replace -value "Rigid Set creation options" m_bulletInitUI.kCreateRBSetOpt;
+displayString -replace -value "Ragdoll" m_bulletInitUI.kCreateRagdoll;
+displayString -replace -value "Create a ragdoll from the selected root joint of a skeleton." m_bulletInitUI.kCreateRagdollAnnot;
+displayString -replace -value "Ragdoll creation options" m_bulletInitUI.kCreateRagdollOpt;
+displayString -replace -value "Soft Body" m_bulletInitUI.kCreateSB;
+displayString -replace -value "Soft Body Anchor" m_bulletInitUI.kCreateSBAnchor;
+displayString -replace -value "Select geometry objects to create Soft Bodies" m_bulletInitUI.kCreateSBAnnot;
+displayString -replace -value "Create Soft Body options" m_bulletInitUI.kCreateSBOpt;
+displayString -replace -value "Delete Entire Bullet System" m_bulletInitUI.kDeleteBulletSystem;
+displayString -replace -value "Delete all Bullet solvers and their rigid and soft bodies" m_bulletInitUI.kDeleteBulletSystemAnnot;
+displayString -replace -value "Delete" m_bulletInitUI.kDeleteRigidSet;
+displayString -replace -value "Delete the selected rigid sets along with their intial state, solved state and output mesh nodes." m_bulletInitUI.kDeleteRigidSetAnnot;
+displayString -replace -value "Empty" m_bulletInitUI.kEmptyRigidSet;
+displayString -replace -value "Remove all member objects from the selected rigid sets and update their associated initial state and solved state nodes." m_bulletInitUI.kEmptyRigidSetAnnot;
+displayString -replace -value "Export all to Alembic..." m_bulletInitUI.kExportAll;
+displayString -replace -value "Export the transforms of all Bullet object to Alembic" m_bulletInitUI.kExportAllAnnot;
+displayString -replace -value "Export selection to Alembic..." m_bulletInitUI.kExportSelected;
+displayString -replace -value "Export the transforms of selected Bullet objects to Alembic" m_bulletInitUI.kExportSelectedAnnot;
+displayString -replace -value "Extract Selected" m_bulletInitUI.kExtractFromRigidSet;
+displayString -replace -value "Extract the selected objects from the specified rigid set into a new rigid set" m_bulletInitUI.kExtractFromRigidSetAnnot;
+displayString -replace -value "Help" m_bulletInitUI.kHelp;
+displayString -replace -value "Initial State" m_bulletInitUI.kInitialState;
+displayString -replace -value "Membership" m_bulletInitUI.kMembership;
+displayString -replace -value "Modify" m_bulletInitUI.kModify;
+displayString -replace -value "Bend Resistance" m_bulletInitUI.kPaintBendResistanceProp;
+displayString -replace -value "Paint particle Bend Resistance" m_bulletInitUI.kPaintBendResistancePropAnnot;
+displayString -replace -value "Linear Stiffness" m_bulletInitUI.kPaintLinearStiffnessProp;
+displayString -replace -value "Paint particle Linear Stiffness" m_bulletInitUI.kPaintLinearStiffnessPropAnnot;
+displayString -replace -value "Mass" m_bulletInitUI.kPaintMassProp;
+displayString -replace -value "Paint particle mass factor (multiplied by the main mass attribute)" m_bulletInitUI.kPaintMassPropAnnot;
+displayString -replace -value "Remove Bullet from Selection" m_bulletInitUI.kRemoveBulletObjects;
+displayString -replace -value "Remove all Bullet objects from selection and restore to original state" m_bulletInitUI.kRemoveBulletObjectsAnnot;
+displayString -replace -value "Remove Selected" m_bulletInitUI.kRemoveFromRigidSet;
+displayString -replace -value "Remove the selected objects from the specified rigid sets." m_bulletInitUI.kRemoveFromRigidSetAnnot;
+displayString -replace -value "Reset Initial State" m_bulletInitUI.kResetInitialState;
+displayString -replace -value "Reset the initial state to the original state of the rigid set members." m_bulletInitUI.kResetInitialStateAnnot;
+displayString -replace -value "Rigid Sets" m_bulletInitUI.kRigidSets;
+displayString -replace -value "Select Bullet Solver" m_bulletInitUI.kSelectSolver;
+displayString -replace -value "Select Bullet Solver" m_bulletInitUI.kSelectSolverAnnot;
+displayString -replace -value "Select Initial State" m_bulletInitUI.kSeleteInitialState;
+displayString -replace -value "Select the initial state node associated with rigid set" m_bulletInitUI.kSeleteInitialStateAnnot;
+displayString -replace -value "Bend Resistance" m_bulletInitUI.kSetBendResistanceProp;
+displayString -replace -value "Explicitly set per-particle bend resistance for particles corresponding to selected mesh vertices (multiplied by the main bend resistance attribute)" m_bulletInitUI.kSetBendResistancePropAnnot;
+displayString -replace -value "Set Initial State" m_bulletInitUI.kSetInitialState;
+displayString -replace -value "Set the initial state from current state of rigid set members." m_bulletInitUI.kSetInitialStateAnnot;
+displayString -replace -value "Linear Stiffness" m_bulletInitUI.kSetLinearStiffnessProp;
+displayString -replace -value "Explicitly set per-particle linear stiffness for particles corresponding to selected mesh vertices (multipled by the main linear stiffness)" m_bulletInitUI.kSetLinearStiffnessPropAnnot;
+displayString -replace -value "Mass" m_bulletInitUI.kSetMassProp;
+displayString -replace -value "Explicitly set per-particle mass for particles corresponding to selected mesh vertices (multiplied by the main mass attribute)" m_bulletInitUI.kSetMassPropAnnot;
+displayString -replace -value "Paint" m_bulletInitUI.kSetSBPropPaint;
+displayString -replace -value "Set" m_bulletInitUI.kSetSBPropSet;
+displayString -replace -value "Soft Body Vertex Properties" m_bulletInitUI.kSetSBProps;
+displayString -replace -value "[BULLET] " m_bulletInitUI.kSolverProperties;

@@ -1,0 +1,35 @@
+<!--
+===========================================================================
+Copyright 2012 Autodesk, Inc. All rights reserved.
+
+Use of this software is subject to the terms of the Autodesk license
+agreement provided at the time of installation or download, or which
+otherwise accompanies this software in either electronic or hard copy form.
+===========================================================================
+
+Total fragment graph for procedural checker plugin texture
+-->
+
+<fragment_graph name="checkerNodePluginGraph" ref="checkerNodePluginGraph" class="FragmentGraph" version="1.0">
+	<fragments>
+		<fragment_ref name="checkerNodePluginFragment" ref="checkerNodePluginFragment" />
+		<fragment_ref name="checkerNodePluginFragmentOutput" ref="checkerNodePluginFragmentOutput" />
+	</fragments>
+	<connections>
+		<connect from="checkerNodePluginFragment.output" to="checkerNodePluginFragmentOutput.checkerNodePluginFragmentOutput" />
+	</connections>
+	<properties>
+		<float3 name="color1" ref="checkerNodePluginFragment.color1" />
+		<float3 name="color2" ref="checkerNodePluginFragment.color2" />
+		<float2 name="bias" ref="checkerNodePluginFragment.bias" />
+		<float2 name="uvCoord" ref="checkerNodePluginFragment.uvCoord" semantic="mayaUvCoordSemantic" flags="varyingInputParam" />
+	</properties>
+	<values>
+		<float3 name="color1" value="0.0,0.58824,0.644" />
+		<float3 name="color2" value="1.0,1.0,1.0" />
+		<float2 name="bias" value="0.5,0.5" />
+	</values>
+	<outputs>
+		<struct name="output" ref="checkerNodePluginFragmentOutput.checkerNodePluginFragmentOutput" />
+	</outputs>
+</fragment_graph>

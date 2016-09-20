@@ -1,0 +1,162 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//
+//  Description:
+//      This script imports an Alembic file to the current scene by
+//      gpuCache node.
+//
+
+// Global Variables
+string $gGpuCacheImportLastDirectory;
+string $gGpuCacheImportLastWorkspace;
+
+//
+//  Procedure Name:
+//      syncOptionVars
+//
+//  Description:
+//      Synchronize option values with the argument list.
+//
+//  Input Arguments:
+//      version - The version of the argument list.
+//
+//      args    - A list of arguments to invoke dogpuCacheImportArgList.
+//
+//  Return Value:
+//      None.
+//
+proc syncOptionVars(string $version, string $args[])
+{
+    int $versionNum                  = $version;
+    int $fitTimeRange                = $args[0];
+    int $setCurrentTimeToStartFrame  = $args[1];
+
+    optionVar -intValue gpuCache_importFitTimeRange                $fitTimeRange;
+    optionVar -intValue gpuCache_importSetCurrentTimeToStartFrame  $setCurrentTimeToStartFrame;
+}
+
+//
+//  Procedure Name:
+//      doGpuCacheImportArgList
+//
+//  Description:
+//      Create a gpuCache node and set its file path attribute based on the argument list.
+//
+//  Input Arguments:
+//      version - The version of the argument list.
+//
+//      args    - A list of arguments.
+//
+//  Return Value:
+//      None.
+//
+global proc doGpuCacheImportArgList(string $version, string $args[])
+{
+    int $versionNum = $version;
+    if (!`exists captureGpuCacheImportOptionVars`) {
+        eval("source \"performGpuCacheImport.mel\"");
+    }
+
+    // Back up the current option values so that we can restore
+    // them later if the dialog is cancelled
+    string $optionVarsBackup[] = captureGpuCacheImportOptionVars($version);
+
+    // Synchronize the option values with the argument list
+    syncOptionVars($version, $args);
+
+    // Prepare filter and starting dir for file dialog
+    string $filter = (uiRes("m_doGpuCacheImportArgList.kAlembic")) + " (*.abc);;"
+                        + (uiRes("m_doGpuCacheImportArgList.kAllFiles")) + " (*.*)";
+    if (size(`workspace -fileRuleEntry alembicCache`) == 0) {
+        workspace -fileRule "alembicCache" "cache/alembic";
+        workspace -saveWorkspace;
+    }
+    string $workspace = `workspace -fileRuleEntry alembicCache`;
+    $workspace = `workspace -expandName $workspace`;
+    sysFile -makeDir $workspace;
+
+    global string $gGpuCacheImportLastDirectory;
+    global string $gGpuCacheImportLastWorkspace;
+    string $startingDir = $gGpuCacheImportLastDirectory;
+    if (size($startingDir) == 0 || $gGpuCacheImportLastWorkspace != `workspace -q -rootDirectory`) {
+        $startingDir = $workspace;
+    }
+
+    // Choose a file to import
+    string $result[] = `fileDialog2
+                            -returnFilter 1
+                            -fileFilter $filter
+                            -caption (uiRes("m_doGpuCacheImportArgList.kGpuCacheImport"))
+                            -startingDirectory $startingDir
+                            -fileMode 1
+                            -okCaption (uiRes("m_doGpuCacheImportArgList.kImport"))
+                            -optionsUICreate "gpuCache_importFileOptionsUICreate"
+                            -optionsUIInit   "gpuCache_importFileOptionsUIInit"
+                            -optionsUICommit "gpuCache_importFileOptionsUICommit"
+                            `;
+    if (size($result) == 0 || size($result[0]) == 0) {
+        // Cancelled
+        // Restore optionVars to the state before this procedure is called
+        //
+        syncOptionVars($version, $optionVarsBackup);
+        return;
+    }
+
+    // Save the last directory
+    $gGpuCacheImportLastDirectory = dirname($result[0]);
+    $gGpuCacheImportLastWorkspace = `workspace -q -rootDirectory`;
+
+    // Parameters
+    int $fitTimeRange                = `optionVar -q gpuCache_importFitTimeRange`;
+    int $setCurrentTimeToStartFrame  = `optionVar -q gpuCache_importSetCurrentTimeToStartFrame`;
+
+    // Check if gpuCache is loaded
+    if (!`pluginInfo -q -loaded gpuCache`) {
+        error (uiRes("m_doGpuCacheImportArgList.kGpuCachePluginNotLoaded"));
+        return;
+    }
+
+    // Create gpuCache node
+    string $fileFullPath = $result[0];
+    string $fileName     = basenameEx($fileFullPath);
+    string $nodeName     = formValidObjectName($fileName);
+
+    string $xformNode = `createNode transform -name $nodeName`;
+    createNode gpuCache -name ($nodeName + "Shape") -parent $xformNode;
+        setAttr ".cacheFileName" -type "string" $fileFullPath;
+
+    // Center pivot
+    xform -centerPivots $xformNode;
+
+    // Time slider and current time
+    if ($versionNum > 0) {
+        if ($fitTimeRange || $setCurrentTimeToStartFrame) {
+            // Query the animation time range in current time unit
+            float $animTimeRange[] = `gpuCache -q -animTimeRange $xformNode`;
+
+            if ($animTimeRange[0] <= $animTimeRange[1]) {
+                // Fit time range
+                if ($fitTimeRange) {
+                    playbackOptions -minTime $animTimeRange[0];
+                    playbackOptions -maxTime $animTimeRange[1];
+                    playbackOptions -animationStartTime $animTimeRange[0];
+                    playbackOptions -animationEndTime   $animTimeRange[1];
+                }
+
+                // Set current time to start frame
+                if ($setCurrentTimeToStartFrame) {
+                    currentTime $animTimeRange[0];
+                }
+            }
+        }
+    }
+
+    // Select the transform node
+    select $xformNode;
+}
+

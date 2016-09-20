@@ -1,0 +1,19 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+createNode transform -n animCube1;
+createNode mesh -n animCubeShape1 -p animCube1;
+sets -add initialShadingGroup animCubeShape1;
+createNode animCube -n animCubeNode1;
+connectAttr time1.outTime animCubeNode1.time;
+connectAttr animCubeNode1.outputMesh animCubeShape1.inMesh;

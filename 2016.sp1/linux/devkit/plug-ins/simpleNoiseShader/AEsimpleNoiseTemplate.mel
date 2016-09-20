@@ -1,0 +1,41 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ===========================================================================
+//
+// agreement provided at the time of installation or download, or which
+// ===========================================================================
+//+
+
+global proc AEsimpleNoiseTemplate(string $nodeName)
+{
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	editorTemplate -beginLayout "Simple Noise Attributes" -collapse 0;
+		editorTemplate -addControl "amplitude";
+		editorTemplate -addControl "ratio";
+		editorTemplate -addControl "numWaves";
+		editorTemplate -addControl "depthMax";
+		editorTemplate -addControl "frequency";
+		editorTemplate -addControl "frequencyRatio";
+		editorTemplate -addControl "time";
+	editorTemplate -endLayout;
+
+	editorTemplate -beginLayout "UV Coordinates" -collapse 1;
+		editorTemplate -addControl "uvCoord";
+	editorTemplate -endLayout;
+
+	// include/call base class/node attributes
+	AEdependNodeTemplate $nodeName;
+
+	editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}
+
+

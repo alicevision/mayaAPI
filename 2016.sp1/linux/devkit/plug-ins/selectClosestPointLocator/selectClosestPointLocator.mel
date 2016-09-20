@@ -1,0 +1,50 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+//-
+// This script sets up an example scene where the default selection method for
+// locators may fail without using the closestPoint mechanism in MPxLocatorNode.
+//
+// Looking through testCamera1, click-select objectLocator1.
+//
+// The selectClosestPointLocator draws as a plane in space.  In order for Maya
+// to know where the cursor's selection ray hits the locator, the locator node
+// must do that calculation itself, inside its closestPoint method.
+//
+// Without this information, Maya will use the object space origins of the two
+// locators, and select the one that is closer to the camera.  Since the origin
+// of the much larger floorPlaneLocator is closer to the camera, this will 
+// result in the floorPlaneLocator being selected, even though at the selection 
+// point it is behind the objectLocator1.
+//
+// But since closestPoint is computed inside both locators, Maya receives the 
+// necessary information, and can correctly select the objectLocator1.
+//+
+loadPlugin selectClosestPointLocator.so;
+
+group -em -n floorPlaneTransform1;
+createNode selectClosestPointLocator -n floorPlaneLocator -p floorPlaneTransform1;
+scale 15 1 20 floorPlaneTransform1;
+
+group -em -n objectTransform1;
+createNode selectClosestPointLocator -n objectLocator1 -p objectTransform1;
+move -18 3 -18 objectLocator1;
+scale .33 .33 .33 objectLocator1;
+rotate 45 0 -30 objectLocator1;
+
+camera -n testCamera1;
+move 17 8 31 testCamera1;
+rotate -21 30 0 testCamera1;
+
+lookThru testCamera1;
+

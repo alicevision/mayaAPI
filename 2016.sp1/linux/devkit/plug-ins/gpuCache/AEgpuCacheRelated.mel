@@ -1,0 +1,80 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+// FILE: AEgpuCacheRelated.mel
+// INPUT: string (node name)
+// RETURN:	string[] (list of related nodes, with the node whose
+//			tab you want to be opened duplicated at the
+//			end of the array)
+//
+
+global proc string[] AEgpuCacheRelated( string $node )
+{
+	string $retval[];
+
+	$retval[0] = $node;
+
+	// Get the default tabs for this node
+
+	string $relNodes[] = `defaultNavigation -ren -d $node`;
+	string $preferredNode = `defaultNavigation -dwn -d $node`;
+
+	for ($relNode in $relNodes) {
+		$retval[size($retval)] = $relNode;
+	}
+
+	// Get the connections to the mesh node
+
+	string $plugs[] = `listConnections -s false -sh true -d true $node`;
+
+	// Look for a connected shading engine - this is
+	// the jumping off point to get to the rendering nodes
+	// from a selected surface
+
+	for( $plug in $plugs ) {
+		string $nType = `nodeType $plug`;
+		if ( $nType == "shadingEngine" ) {
+
+			// Get the shader that's connected to this
+			// shading engine
+			
+			string $mayaShaders[] =
+					`listConnections ( $plug + ".surfaceShader" )`;
+
+			string $customShaders[];
+			string $customShadersArray[] = `callbacks -executeCallbacks -hook "allConnectedShaders" $plug`;
+			string $customShadersAsString;
+			for( $customShadersAsString in $customShadersArray )
+			{
+				string $tokens[];
+				tokenize($customShadersAsString, ":", $tokens);
+				appendStringArray($customShaders, $tokens, size($tokens));
+			}
+			
+			// If the connection is null, then there is no
+			// shading group attached to this node - simply
+			// return the node itself.
+
+			int $mayaSize = size($mayaShaders);
+			int $customShadersSize = size($customShaders);
+			if ($mayaSize == 0 && $customShadersSize == 0) {
+				$retval[size($retval)] = $plug;
+			} else {
+				appendStringArray($retval, $mayaShaders, $mayaSize);
+				appendStringArray($retval, $customShaders, $customShadersSize);
+			}
+		}
+	}
+
+	if( $preferredNode == "" ) {
+		$preferredNode = $node;
+	}
+	$retval[size($retval)] = $preferredNode;
+
+	return $retval;
+}
+

@@ -1,0 +1,84 @@
+#-
+# ==========================================================================
+# Copyright 1995,2006,2008,2009 Autodesk, Inc. All rights reserved.
+#
+# Use of this software is subject to the terms of the Autodesk
+# license agreement provided at the time of installation or download,
+# or which otherwise accompanies this software in either electronic
+# or hard copy form.
+# ==========================================================================
+#+
+
+#	To build all of the Qt plug-ins, execute the following command:
+#
+#		make -f Makefile.qt
+#
+#	The plug-ins will end up in the current directory.
+#
+#	To build a specific Qt plug-in, give its filename on the command line:
+#
+#		Linux:	make -f Makefile.qt qtForms.so
+#		OS X:	make -f Makefile.qt qtForms.bundle
+#
+#	This will also work for your own plug-in so long as there is a Qt project
+#	file (with extension '.pro') for it in the current directory. For example,
+#	let's say that you have placed the file 'myPlugin.pro' in the current
+#	directory, along with the plug-in's source code. You can build it as
+#	follows:
+#
+#		Linux:	make -f Makefile.qt myPlugin.so
+#		OS X:	make -f Makefile.qt myPlugin.bundle
+
+#
+# Include platform specific build settings
+#
+include buildconfig
+
+
+# Use qmake to create a Makefile for the plugin then make the following
+# edits to it:
+#
+# 1) Edit the TARGET variable to remove 'lib' from the start of the plugin's
+#    name.
+# 2) For any Qt library which Maya provides, we want to link to Maya's copy
+#	 of the library, not a locally installed copy. We do this by replacing
+#	 '-framework' options for those libs with explicit paths. (OSX-only)
+# 3) Remove the '-dynamiclib' flag because it conflicts with '-bundle'.(OSX-only)
+# 4) Remove the '-mtune=generic' flag because the older version of gcc
+#    required by Maya does not support it yet.
+#
+%.mak :	%.pro qtconfig
+	$(QMAKE) -o - QMAKE_CC=$(CC) QMAKE_CXX=$(CXX) $< | \
+		sed -e '/^TARGET.*=/s?=.*$$?= $$(QMAKE_TARGET).$(EXT)?' \
+			-e 's?-framework QtCore?$$(MAYA_LOCATION)/MacOS/QtCore?' \
+			-e 's?-framework QtGui?$$(MAYA_LOCATION)/MacOS/QtGui?' \
+			-e 's?-framework QtOpenGL?$$(MAYA_LOCATION)/MacOS/QtOpenGL?' \
+			-e 's?-framework QtTest?$$(MAYA_LOCATION)/MacOS/QtTest?' \
+			-e 's?-framework QtXml?$$(MAYA_LOCATION)/MacOS/QtXml?' \
+			-e 's?-dynamiclib??' -e 's?-mtune=generic??' >$@
+
+PLUGINS =	helixQtCmd.$(EXT)	\
+			qtForms.$(EXT)		\
+			saveSwatchesCmd.$(EXT)
+
+ifeq ($(QMAKE),)
+all:
+	@echo "Qt not found. Qt-based plug-ins will not be built."
+else
+all:	$(PLUGINS)
+endif
+
+
+# For each plugin, make sure that its individual Makefile is up-to-date then
+# use that Makefile to build the plugin.
+.PHONY:	force
+%.$(EXT):	force
+	$(MAKE) -f Makefile.qt $(@:.$(EXT)=.mak)
+	$(MAKE) -f $(@:.$(EXT)=.mak) $@
+
+clean:
+	rm -f $(PLUGINS:.$(EXT)=.o) $(PLUGINS:.$(EXT)=.mak) \
+		moc_* ui_* qrc_*
+
+Clean:	clean
+	rm -f $(PLUGINS)

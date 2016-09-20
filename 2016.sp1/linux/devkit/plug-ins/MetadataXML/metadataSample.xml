@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<associations>
+    <!-- Structure definition from another file
+    <structure>
+        <name>IDStructure</name>
+        <member>
+            <name>ID</name>
+            <type>int32</type>
+        <member>
+            <name>name</name>
+            <dim>2</dim>
+            <type>string</type>
+        </member>
+    </structure>
+    -->
+    <channel>
+    	<name>vertex</name>
+        <stream>
+            <name>vStream</name>
+            <structure>IDStructure</structure>
+            <data>
+                <index>1</index>
+                <ID>123</ID>
+                <name>nameSpace</name>
+                <name>name1</name>
+            </data>
+            <data>
+                <index>2</index>
+                <ID>234</ID>
+            </data>
+            <data>
+                <index>3</index>
+                <ID>345</ID>
+                <name>nameSpace</name>
+                <name>name3</name>
+            </data>
+        </stream>
+    </channel>
+    <channel>
+    	<name>vertexFace</name>
+        <stream>
+            <name>vfStream</name>
+            <structure>IDStructure</structure>
+            <indexType>pair</indexType>
+            <data>
+                <index>1 2</index>
+                <ID>9123</ID>
+                <name>nameSpaceVF</name>
+                <name>name1</name>
+            </data>
+            <data>
+                <index>2 2</index>
+                <ID>9234</ID>
+            </data>
+            <data>
+                <index>3 3</index>
+                <ID>9345</ID>
+                <name>nameSpaceVF</name>
+                <name>name3</name>
+            </data>
+        </stream>
+    </channel>
+</associations>

@@ -1,0 +1,110 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+global proc sweptEmitter() 
+{
+	file -force -new;
+    currentUnit -linear centimeter -angle degree -time film;   
+
+	// Load the plug-in emitter. And create an emitter node.
+	//
+	loadPlugin "sweptEmitter.so";
+
+	// create emitter node
+	createNode sweptEmitter -name sweptEmitter;
+
+    // create curve
+	// create particle object 
+    // connect plugin emitter to particles
+    // add curve as owner of emitter
+	//
+	curve -d 3 -p 0.9062838 0 7.48741 -p 7.895241 0 4.645029 -p 8.033125 0 -3.832477 -p 1.767829 0 -9.903498 -k 0 -k 0 -k 0 -k 1 -k 1 -k 1 ;
+
+
+	particle -name particles ;
+
+	connectDynamic -em sweptEmitter particles;
+
+	addDynamic sweptEmitter curve1;
+
+	setAttr "sweptEmitter.speed" 20;
+	setAttr "sweptEmitter.rate"  48;
+	// change smaller tesselation
+	setAttr "geoConnector1.tessellationFactor" 20;
+
+
+    playbackOptions -e -min 0.00 -max 15.0;
+	currentTime -e 0;
+	play -wait -forward true;
+
+
+	// animate emitter transform
+	select -r sweptEmitter;
+	setAttr "sweptEmitter.speed" 20;
+    playbackOptions -e -min 0.00 -max 60.0;
+
+	currentTime -e 0;
+	setKeyframe "sweptEmitter.rz";
+
+	currentTime -e 15;
+	rotate -r -eu 0 0 50.4 ;
+	setKeyframe "sweptEmitter.rz";
+
+	currentTime -e 30;
+	rotate -r -eu 0 0 -45.4 ;
+	setKeyframe "sweptEmitter.rz";
+
+	currentTime -e 60;
+	rotate -r -eu 0 0 90. ;
+	setKeyframe "sweptEmitter.rz";
+
+	currentTime -e 0;
+	play -wait -forward true;
+
+    // delete keyframe connections
+    disconnectAttr sweptEmitter_rotateZ.output sweptEmitter.rotateZ;
+	setAttr sweptEmitter.rz 0;
+
+	// animate the curve's transform
+
+	select -r curve1;
+	currentTime -e 0;
+	setKeyframe "curve1.rz";
+
+	currentTime -e 60 ;
+	setAttr "curve1.rotateZ" 180;
+	setKeyframe "curve1.rz";
+
+	currentTime -e 0 ;
+	play -wait -forward true;
+
+
+	// animate some control points
+
+	currentTime -e 60 ;
+	select -cl  ;
+	select -r curveShape1.cv[0] ;
+	move -r 0 0 -10.138097 ;
+	move -r 0 -7.424408 0 ;
+	setKeyframe -breakdown 0 -hierarchy none -controlPoints 1 -shape 1;
+
+	select -r curveShape1.cv[3] ;
+	move -r 0 6.192177 0 ;
+	setKeyframe -breakdown 0 -hierarchy none -controlPoints 1 -shape 1;
+
+	currentTime -e 0 ;
+	play -wait -forward true;
+
+}
+
+

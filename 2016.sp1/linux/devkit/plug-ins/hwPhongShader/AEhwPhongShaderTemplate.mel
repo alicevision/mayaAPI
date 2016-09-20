@@ -1,0 +1,46 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+global proc AEhwPhongShaderTemplate( string $nodeName )
+{
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	editorTemplate -beginLayout "Common Material Attributes" -collapse 0;
+		editorTemplate -addControl "color";
+		editorTemplate -addControl "diffuseColor";
+		editorTemplate -addControl "transparency";
+	editorTemplate -endLayout;
+
+	editorTemplate -beginLayout "Specular Shading" -collapse 0;
+		editorTemplate -addControl "specularColor";
+		editorTemplate -addControl "shininess";
+	editorTemplate -endLayout;
+
+	editorTemplate -suppress "geometryShape";
+
+	// From parent
+	editorTemplate -suppress "outColor";
+	editorTemplate -suppress "outTransparency";
+	editorTemplate -suppress "outMatteOpacity";
+	editorTemplate -suppress "outGlowColor";
+	editorTemplate -suppress "enableHwShading";
+
+	// include/call base class/node attributes
+	AEdependNodeTemplate $nodeName;
+	
+	editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}
+
+

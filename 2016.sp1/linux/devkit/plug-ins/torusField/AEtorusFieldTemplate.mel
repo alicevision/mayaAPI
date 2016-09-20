@@ -1,0 +1,43 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+global proc AEtorusFieldTemplate( string $nodeName )
+{
+	editorTemplate -beginScrollLayout;
+
+	editorTemplate -beginLayout "Transform Attributes" -collapse 0;
+		editorTemplate -addControl "translate";
+		editorTemplate -addControl "rotate";
+		editorTemplate -addControl "scale";
+		editorTemplate -addControl "shear";
+		editorTemplate -addControl "rotateOrder";
+		editorTemplate -addControl "rotateAxis";
+		editorTemplate -addControl "inheritsTransform";
+	editorTemplate -endLayout;
+
+	editorTemplate -beginLayout "Torus Field Attributes" -collapse 0;
+		AEfieldCommon $nodeName;
+		editorTemplate -addControl "minDistance";
+		editorTemplate -addControl "attractDistance";
+		editorTemplate -addControl "repelDistance";
+		editorTemplate -addControl "drag";
+		editorTemplate -addControl "swarmAmplitude";
+		editorTemplate -addControl "swarmFrequency";
+		editorTemplate -addControl "swarmPhase";
+	editorTemplate -endLayout;
+
+	AEfieldNoScroll $nodeName;
+
+	editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}

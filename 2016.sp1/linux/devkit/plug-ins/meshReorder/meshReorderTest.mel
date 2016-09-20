@@ -1,0 +1,76 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+////////////////////////////////////////////////////////////////////////
+// 
+// meshReorderTest.mel
+// 
+// Description:
+//    Simple test to verify the logic in meshReorder command is correct
+// 
+////////////////////////////////////////////////////////////////////////
+
+global proc meshReorderTest()
+{
+	file -f -new;
+
+	string $nodes[];
+	string $plane1Orig;
+	string $plane1Reordered;
+	string $plane2Orig;
+	string $plane2Reordered;
+
+	$nodes = `polyPlane -w 1 -h 1 -sx 10 -sy 10 -ax 0 1 0 -cuv 1 -ch off`;
+	$plane1Orig = $nodes[0];
+
+	select -r ($plane1Orig + ".vtx[0]");
+	delete;
+
+	polySubdivideEdge -ws 0 -s 0 -dv 1 -ch off ($plane1Orig + ".e[0]");
+
+	$nodes = `duplicate $plane1Orig`;
+	$plane1Reordered = $nodes[0];
+
+	select -cl;
+	meshReorder ($plane1Reordered + ".vtx[19]")
+			($plane1Reordered + ".vtx[8]") ($plane1Reordered + ".vtx[9]");
+	select $plane1Reordered;
+	move 0 0 2;
+
+	$nodes = `polyPlane -w 1 -h 1 -sx 10 -sy 10 -ax 0 1 0 -cuv 1 -ch off`;
+	$plane2Orig = $nodes[0];
+	move -2 0 0;
+
+	$nodes = `duplicate $plane2Orig`;
+	$plane2Reordered = $nodes[0];
+
+	select -cl;
+	meshReorder ($plane2Reordered + ".vtx[20]")
+			($plane2Reordered + ".vtx[9]") ($plane2Reordered + ".vtx[10]");
+	select $plane2Reordered;
+	move -2 0 2;
+
+	// Create a blendshape from the newly ordered shapes, 
+	// It'll be nice and orderly
+
+	select $plane1Reordered $plane2Reordered;
+	$nodes = `blendShape -frontOfChain`;
+	setAttr ($nodes[0] + "." + $plane1Reordered) .5;
+
+	// Create a blendshape from the original shapes, 
+	// It'll be a mess
+
+	select $plane1Orig $plane2Orig;
+	$nodes = `blendShape -frontOfChain`;
+	setAttr ($nodes[0] + "." + $plane1Orig) .5;
+}

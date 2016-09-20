@@ -1,0 +1,43 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+//
+//  Autodesk Script File
+////
+//  Procedure Name:
+//	AEexampleRampAttrNodeTemplate
+//
+//  Description:
+//	Creates the attribute editor controls for the exampleRampAttrNode
+//
+//  Input Value:
+//	nodeName
+//
+//  Output Value:
+//	None
+//
+
+
+
+global proc AEexampleRampAttrNodeTemplate ( string $nodeName )
+{
+editorTemplate -beginScrollLayout;
+
+	editorTemplate -beginLayout "Ramp Attributes" -collapse 0;
+		AEaddRampControl ($nodeName+".curveRamp");
+		AEaddRampControl ($nodeName+".colorRamp");
+	editorTemplate -endLayout;
+
+editorTemplate -addExtraControls;
+editorTemplate -endScrollLayout;
+}

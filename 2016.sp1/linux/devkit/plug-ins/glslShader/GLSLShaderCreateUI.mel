@@ -1,0 +1,179 @@
+//
+//  Description:
+//      Create UI components for GLSLShader plugin
+//
+
+// Close the preference window if it is open before adding the new panel for GLSLShader:
+proc closePreferencesWindow()
+{
+	global string $gPreferenceWindow;
+	if (`window -exists $gPreferenceWindow`) {
+		string $result;
+		string $confirmMessage = getPluginResource( "glslShader", "kPrefSavePrefsOrNotMsg" );
+		string $save = `uiRes "s_TdialogStrings.rSave"`;
+		string $dontSave = `uiRes "s_TdialogStrings.rDontSave"`;
+
+		$result = `confirmDialog -title (getPluginResource( "glslShader", "kPrefSaveMsg" ))
+			-message $confirmMessage
+			-button $save 
+			-button $dontSave
+			-defaultButton $save
+			-cancelButton $dontSave`;
+
+		if ($result == $save) {
+			savePrefsChanges;
+		}
+		else {
+			cancelPrefsChanges;
+		}
+	}
+}
+
+global proc prefsFrameLayoutCreateGLSLShader()
+{
+	frameLayout -labelVisible false -borderVisible false -marginWidth 10 -marginHeight 10;
+	    columnLayout -adj true prefGLSLShaderCol;
+}
+
+global proc prefsSetOptVarToDefaultGLSLShader()
+{
+	optionVar -sv "GLSLShaderDefaultEffect" "AutodeskUberShader.ogsfx";
+}
+
+global proc GLSLShaderRefreshValueCtrls()
+{
+	global string $gPreferenceWindow;
+	if (!`window -exists $gPreferenceWindow`) {
+		return;
+	}
+
+	setParent $gPreferenceWindow;
+	string $parent = "prefGLSLShaderCol";
+	
+	if (`columnLayout -q -numberOfChildren $parent` == 0) {
+		return;
+	}
+
+	textField -e -fileName `optionVar -q GLSLShaderDefaultEffect` GLSLShaderDefaultEffectField;
+}
+
+global proc prefsHoldCurrentStateGLSLShader(string $mode)
+{
+	// Avoid missing value updates by assuming fields are all changed. 
+	prefGLSLShaderDefaultEffectValueUpdate;
+
+	if ($mode == "save") {
+		optionVar -sv "GLSLShaderDefaultEffectHold" `optionVar -q GLSLShaderDefaultEffect`;
+	} else if ($mode == "restore") {
+		optionVar -sv "GLSLShaderDefaultEffect" `optionVar -q GLSLShaderDefaultEffectHold`;
+	} else {	// "remove"
+		// Remove the temporary option vars so they don't get saved out
+		optionVar -remove "GLSLShaderDefaultEffectHold";
+	}
+	
+	GLSLShaderRefreshValueCtrls;
+}
+
+global proc prefGLSLShaderDefaultEffectBrowser()
+{
+	// Start in current file's directory if possible. 
+	string $sStartingdir = `textField -q -fileName GLSLShaderDefaultEffectField`;
+	$sStartingdir = `match ".*/" $sStartingdir`; 
+
+	string $fileDialogCmd = "fileDialog2";
+		$fileDialogCmd += (" -cap \"" + (getPluginResource( "glslShader", "kPrefFileOpen")) + "\"");
+		$fileDialogCmd += (" -fm 1");
+		if( $sStartingdir != "")
+			$fileDialogCmd += (" -dir \"" + $sStartingdir + "\"");
+
+	// Invoke the file browser dialog.
+	string $file[] = `eval $fileDialogCmd`;
+	if (size($file) > 0 && $file[0] != "")
+	{
+		string $path = $file[0];
+
+		// ... strip the QT's .* postfix
+		//     OS native dialog does not have the .* postfix if the filter is * or *.*
+		if ( endsWith($path, ".*") )
+		{
+			$path = substring($path, 1, size($path)-2);
+		}
+
+		textField -e -fileName $path GLSLShaderDefaultEffectField;
+		prefGLSLShaderDefaultEffectValueUpdate();
+	}
+}
+
+global proc prefGLSLShaderDefaultEffectValueUpdate()
+{
+	if (`textField -exists GLSLShaderDefaultEffectField`) {
+		string $newVal = `textField -q -fileName GLSLShaderDefaultEffectField`;
+		optionVar -sv "GLSLShaderDefaultEffect" $newVal;
+	}
+}
+
+global proc prefsCreateGLSLShader()
+{
+	global string $gPreferenceWindow;
+	setParent $gPreferenceWindow;
+	string $parent = "prefGLSLShaderCol";
+	
+	// Check to see if this has been created already.
+	//
+	if (`columnLayout -q -numberOfChildren $parent` > 0) {
+		return;
+	}
+
+	//  Create the UI
+	//
+	setParent $parent;
+	setUITemplate -pushTemplate prefsTemplate;
+
+	// This is used to force the width to fill the window
+	separator -style "none" -h 1;
+	string $editFrameLayoutName = getPluginResource( "glslShader", "kPrefDefaultEffectFile");
+
+	frameLayout -label $editFrameLayoutName;
+	    columnLayout -adjustableColumn true ;
+	    
+		rowLayout -nc 2
+				-cw2 300 25
+				-cal 1 "both"
+				-cal 2 "left"
+				-ct2 "both" "left"
+				-adj 1;
+
+			textField -fileName (`optionVar -q "GLSLShaderDefaultEffect"`)  
+				-cc "prefGLSLShaderDefaultEffectValueUpdate();"
+				GLSLShaderDefaultEffectField;
+			symbolButton -image "navButtonBrowse.png" -c "prefGLSLShaderDefaultEffectBrowser()" browseBtn;
+	
+	setParent $parent;
+
+	setUITemplate -popTemplate;
+
+	GLSLShaderRefreshValueCtrls;
+}
+
+global proc GLSLShaderCreateUI()
+{
+	// make sure preference settings of previous Maya versions do not continue to point to the old shader:
+	if (!`optionVar -exists GLSLShaderDefaultEffect` || `optionVar -q GLSLShaderDefaultEffect` == "SampleEffect10.fx")
+		prefsSetOptVarToDefaultGLSLShader;
+
+	closePreferencesWindow();
+	addCustomPrefsTab("prefsCreateGLSLShader",
+		"prefsFrameLayoutCreateGLSLShader",
+		"GLSLShaderRefreshValueCtrls",
+		"prefsHoldCurrentStateGLSLShader",
+		"prefsSetOptVarToDefaultGLSLShader",
+		(getPluginResource( "glslShader", "kPrefGLSLShaderPanel")),
+		(getPluginResource( "glslShader", "kPrefGLSLShaderTab"))
+		);
+}
+
+global proc GLSLShaderDeleteUI()
+{
+	closePreferencesWindow();
+	deleteCustomPrefsTab("prefsCreateGLSLShader");
+}

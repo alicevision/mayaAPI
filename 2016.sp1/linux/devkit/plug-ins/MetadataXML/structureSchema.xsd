@@ -1,0 +1,73 @@
+<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema'
+		   elementFormDefault='qualified'>
+
+  <!-- ====================================================== -->
+  <!-- This format only supports a single structure per file. -->
+  <!-- Although multiple ones could easily  be added that is  -->
+  <!-- not  necessarily true of other  serialization types so -->
+  <!-- this one is restricted for consistency.                -->
+  <!-- ====================================================== -->
+  <xs:element name='structure' type='Structure'/>
+
+  <xs:complexType name='Structure'>
+
+    <xs:sequence>
+      <!-- Mandatory structure name -->
+      <xs:element name='name' type='xs:string'/>
+
+      <!-- List of structure members (must be at least one for a legal structure) -->
+      <xs:sequence minOccurs='1' maxOccurs='unbounded'>
+        <xs:element name='member' type='Member'/>
+      </xs:sequence>
+    </xs:sequence>
+
+  </xs:complexType>
+
+  <!-- ====================================================== -->
+  <!-- Individual member of a structure.                      -->
+  <!-- ====================================================== -->
+  <xs:complexType name='Member'>
+
+    <xs:sequence>
+      <!-- Mandatory structure member name -->
+      <xs:element name='name' type='xs:string'/>
+
+      <!-- Mandatory structure member type element -->
+      <xs:element name='type' type='MemberType'/>
+
+      <!-- Optional non-zero dimension element -->
+      <xs:element name='dim' minOccurs='0'>
+        <xs:simpleType>
+          <xs:restriction base='xs:integer'>
+            <!-- 0 and lower dimensions do not make sense -->
+            <xs:minInclusive value='1'/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+
+  </xs:complexType>
+
+  <!-- ====================================================== -->
+  <!-- Available member types, matched with the source code   -->
+  <!-- ====================================================== -->
+  <xs:simpleType name='MemberType'>
+    <xs:restriction base='xs:string'>
+      <xs:enumeration value='bool'   />
+      <xs:enumeration value='double' />
+      <xs:enumeration value='dbl4x4' />
+      <xs:enumeration value='float'  />
+      <xs:enumeration value='flt4x4' />
+      <xs:enumeration value='int8'   />
+      <xs:enumeration value='int16'  />
+      <xs:enumeration value='int32'  />
+      <xs:enumeration value='int64'  />
+      <xs:enumeration value='string' />
+      <xs:enumeration value='uint8'  />
+      <xs:enumeration value='uint16' />
+      <xs:enumeration value='uint32' />
+      <xs:enumeration value='uint64' />
+    </xs:restriction>
+  </xs:simpleType> 
+
+</xs:schema>

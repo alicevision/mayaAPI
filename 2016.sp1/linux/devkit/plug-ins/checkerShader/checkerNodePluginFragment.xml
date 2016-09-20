@@ -1,0 +1,88 @@
+<!--
+===========================================================================
+Copyright 2012 Autodesk, Inc. All rights reserved.
+
+Use of this software is subject to the terms of the Autodesk license
+agreement provided at the time of installation or download, or which
+otherwise accompanies this software in either electronic or hard copy form.
+===========================================================================
+
+Main fragment for procedural checker plugin texture
+-->
+
+<fragment uiName="checkerNodePluginFragment" name="checkerNodePluginFragment" type="plumbing" class="ShadeFragment" version="1.0">
+	<description><![CDATA[Checker procedural texture fragment]]></description>
+	<properties>
+		<float3 name="color1" />
+		<float3 name="color2" />
+		<float2 name="bias" />
+		<float2 name="uvCoord" semantic="mayaUvCoordSemantic" flags="varyingInputParam" />
+	</properties>
+	<values>
+		<float3 name="color1" value="0.0,0.58824,0.644" />
+		<float3 name="color2" value="1.0,1.0,1.0" />
+		<float2 name="bias" value="0.5,0.5" />
+	</values>
+	<outputs>
+		<struct name="output" struct_name="checkerNodePluginFragmentOutput" />
+	</outputs>
+	<implementation>
+	<implementation render="OGSRenderer" language="Cg" lang_version="2.1">
+		<function_name val="checkerNodePluginFragment" />
+		<source>
+		<![CDATA[
+checkerNodePluginFragmentOutput checkerNodePluginFragment(float3 color1, float3 color2, float2 bias, float2 uv) 
+{ 
+	checkerNodePluginFragmentOutput result; 
+	result.outColor = color1; 
+	result.outAlpha = 0.0f; 
+	uv -= floor(uv); 
+	if ((uv.x < bias.x && uv.y >= bias.y) || (uv.x >= bias.x && uv.y < bias.y)) { 
+		result.outColor = color2; 
+		result.outAlpha = 1.0f; 
+	} 
+	return result; 
+}
+		]]>
+		</source>
+	</implementation>
+	<implementation render="OGSRenderer" language="HLSL" lang_version="11.0">
+		<function_name val="checkerNodePluginFragment" />
+		<source>
+		<![CDATA[
+checkerNodePluginFragmentOutput checkerNodePluginFragment(float3 color1, float3 color2, float2 bias, float2 uv) 
+{ 
+	checkerNodePluginFragmentOutput result; 
+	result.outColor = color1; 
+	result.outAlpha = 0.0f; 
+	uv -= floor(uv); 
+	if ((uv.x < bias.x && uv.y >= bias.y) || (uv.x >= bias.x && uv.y < bias.y)) { 
+		result.outColor = color2; 
+		result.outAlpha = 1.0f; 
+	} 
+	return result; 
+}
+		]]>
+		</source>
+		</implementation>
+		<implementation render="OGSRenderer" language="GLSL" lang_version="3.0">
+			<function_name val="checkerNodePluginFragment" />
+			<source>
+				<![CDATA[
+checkerNodePluginFragmentOutput checkerNodePluginFragment(vec3 color1, vec3 color2, vec2 bias, vec2 uv) 
+{ 
+	checkerNodePluginFragmentOutput result; 
+	result.outColor = color1; 
+	result.outAlpha = 0.0f; 
+	uv -= floor(uv); 
+	if ((uv.x < bias.x && uv.y >= bias.y) || (uv.x >= bias.x && uv.y < bias.y)) { 
+		result.outColor = color2; 
+		result.outAlpha = 1.0f; 
+	} 
+	return result; 
+}
+		]]>
+		</source>
+	</implementation>
+	</implementation>
+</fragment>

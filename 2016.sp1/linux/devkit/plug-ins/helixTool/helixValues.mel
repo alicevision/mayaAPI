@@ -1,0 +1,61 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+//	Description:	initializes helixContext tool property sheet values
+//
+//	Input Arguments:
+//		toolName  - this is the name of the instance of the tool
+//					that the property sheet is modifying.
+//
+//	Return Value:
+//		None.
+//
+
+
+global proc helixValues(string $toolName) 
+{
+	string $parent = 
+		(`toolPropertyWindow -q -location` + "|helix|helixTabs|helixTab");
+	setParent $parent;
+
+	string $icon = "helixTool.xpm";
+	string $help = "";
+	toolPropertySetCommon $toolName $icon $help;
+
+	frameLayout -e -en true -cl false helixFrame;
+	helixOptionValues($toolName);
+
+	toolPropertySelect helix;
+}
+
+
+global proc helixOptionValues(string $toolName)
+{
+	int $set;
+
+ 	// number of CVs
+ 	//
+ 	$set = eval("helixToolContext -q -numCVs " + $toolName);
+ 	intSliderGrp -e -value $set numCVs;
+
+	// upsideDown
+	//
+	$set = eval("helixToolContext -q -upsideDown " + $toolName);
+ 	if ($set) {
+ 		checkBoxGrp -e -value1 1 upsideDownGrp;
+ 	}
+ 	else {
+ 		checkBoxGrp -e -value1 0 upsideDownGrp;
+ 	}
+}
+

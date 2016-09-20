@@ -1,0 +1,45 @@
+//   Code adapted from the CgFX plugin by NVidia               //
+// This script is run automatically when the GLSLShader plug-in is loaded.
+
+{
+    // Set default definitions for tool buttons in GLSLShader attribute editor.
+    //   [0]:    for each of the 2 tool buttons, the assigned tool name (tab separated)
+    //   [1..N]: any number of tool definitions consisting of tab-separated
+    //             tool name, icon, description, and MEL command string 
+    string $s = "AEGLSLShader_toolSymbolButtons";
+    if ( !`about -batch` &&
+         !`optionVar -exists $s` )
+    {
+		string $reloadTool = getPluginResource( "glslShader", "kReloadTool");
+		string $reloadIcon = "refresh.png";
+		string $reloadAnnotation = getPluginResource( "glslShader", "kReloadAnnotation");
+		string $reloadCommand = "GLSLShader -r <node>;";
+
+		string $editTool = getPluginResource( "glslShader", "kEditTool");
+		string $editIcon = "fileTextureEdit.png";
+		string $editAnnotation;
+		string $editCommand;
+
+        if ( `about -nt` ) {
+			$editAnnotation = getPluginResource( "glslShader", "kEditAnnotationWIN");
+			$editCommand = "system \"load <file>\";";
+        }
+        else if ( `about -macOS` ) {
+			$editAnnotation = getPluginResource( "glslShader", "kEditAnnotationMAC");
+			$editCommand = "open -a TextEdit <file>;";
+        }
+        else {
+			$editAnnotation = getPluginResource( "glslShader", "kEditAnnotationLNX");
+			$editCommand = getPluginResource( "glslShader", "kEditCommandLNX");
+        }
+		
+		string $tools = $reloadTool + "\t" + $editTool;
+		string $reloadArgs = $reloadTool + "\t" + $reloadIcon + "\t" + $reloadAnnotation + "\t" + $reloadCommand;
+		string $editArgs = $editTool + "\t" + $editIcon + "\t" + $editAnnotation + "\t" + $editCommand;
+		
+		optionVar -sva $s ($tools)
+				  -sva $s ($reloadArgs)
+				  -sva $s ($editArgs)
+				  ;
+	}
+}

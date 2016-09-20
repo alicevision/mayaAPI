@@ -1,0 +1,44 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+global proc AEbackFillShaderTemplate( string $nodeName )
+{
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	editorTemplate -beginLayout "Common Material Attributes" -collapse 0;
+		editorTemplate -addControl "color";
+		editorTemplate -addControl "backColor";
+		editorTemplate -addControl "incandescence";
+		editorTemplate -addControl "diffuseReflectivity";
+		editorTemplate -addControl "translucenceCoeff";
+	editorTemplate -endLayout;
+
+	editorTemplate -beginLayout "Specular Shading" -collapse 0;
+		editorTemplate -addControl "power";
+		editorTemplate -addControl "specularity";
+		editorTemplate -addControl "threshold";
+		editorTemplate -addControl "boost";
+	editorTemplate -endLayout;
+
+	editorTemplate -suppress "matrixObjectToWorld";
+	editorTemplate -suppress "matrixWorldToEye";
+
+	// include/call base class/node attributes
+	AEdependNodeTemplate $nodeName;
+	
+	editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}
+
+

@@ -1,0 +1,26 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//
+//  PLUGIN NAME:        gpuCache
+//  FILE:               gpuCacheInitStrings.mel
+//	Procedure Name:     gpuCacheInitStrings
+//
+//	Description:
+//
+//      Register script resources and load localized resources 
+//      for the "gpuCache" plugin
+//
+//	Input Value:        nodeName
+//
+//	Output Value:       None
+//
+
+global proc gpuCacheInitStrings()
+{
+     loadPluginLanguageResources("gpuCache", "gpuCache.pres.mel");
+}

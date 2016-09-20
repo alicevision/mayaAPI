@@ -1,0 +1,68 @@
+//**************************************************************************/
+// Copyright 2011 Autodesk, Inc. 
+// All rights reserved.
+// Use of this software is subject to the terms of the Autodesk license 
+// agreement provided at the time of installation or download, or which 
+// otherwise accompanies this software in either electronic or hard copy form. 
+//**************************************************************************/
+
+// World-view-projection transformation.
+float4x4 gWVPXf : WorldViewProjection < string UIWidget = "None"; >;
+
+// Vertex shader input structure.
+struct VS_INPUT
+{
+    float4 Pos : POSITION;
+	float4 Norm : NORMAL;
+
+    // this is the custom stream
+    // the vertex buffer generator will fill in the stream
+    // when a matching custom semantic is found
+	float4 CustomStream : ATTR7;
+	//int4 CustomStream : ATTR7;
+};
+
+// Vertex shader output structure.
+struct VS_TO_PS
+{
+    // The vertex position in clip space.
+    float4 HPos : POSITION;
+
+    // Color.
+    float4 Color : COLOR0;
+};
+
+// Vertex shader.
+VS_TO_PS VS_cgExample(VS_INPUT In)
+{
+    VS_TO_PS Out;
+	
+	float4 HPm = In.Pos;
+
+    // Transform the position from object space to clip space for output.
+    Out.HPos = mul(gWVPXf, HPm);
+
+	Out.Color = In.Norm;
+
+	// here we use our custom stream data to affect the output. 
+	Out.Color = In.CustomStream;
+	//Out.Color = float4(In.CustomStream.x / 255.0f, In.CustomStream.y / 255.0f, In.CustomStream.z / 255.0f, In.CustomStream.w / 255.0f);
+
+    return Out;
+}
+
+
+float4 PS_cgExample(VS_TO_PS In) : COLOR0
+{
+    return In.Color;
+}
+
+// The main technique.
+technique Main
+{
+    pass P0
+    {
+        VertexProgram = compile glslv VS_cgExample();
+        FragmentProgram = compile glslf PS_cgExample();
+    }
+}

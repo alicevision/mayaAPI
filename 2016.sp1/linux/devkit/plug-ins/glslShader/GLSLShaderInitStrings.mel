@@ -1,0 +1,15 @@
+// PLUGIN NAME: GLSLShader
+
+// FILE: GLSLShaderInitStrings.mel
+
+// DESCRIPTION: Register script resources for the "GLSLShader" plugin
+
+
+global proc GLSLShaderInitStrings()
+{
+	loadPluginLanguageResources("GLSLShader", "GLSLShader.pres.mel");
+
+	string $niceName = getPluginResource( "glslShader", "kNiceNodeName" );
+	displayString -replace -value $niceName "n_GLSLShader.niceName";
+	
+}

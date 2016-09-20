@@ -1,0 +1,139 @@
+// ****************************************************************************
+//
+// Copyright 2014 Autodesk, Inc. All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+// *       Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+// *       Redistributions in binary form must reproduce the above
+// copyright notice, this list of conditions and the following disclaimer
+// in the documentation and/or other materials provided with the
+// distribution.
+// *       Neither the name of Sony Pictures Imageworks, nor
+// Industrial Light & Magic, nor the names of their contributors may be used
+// to endorse or promote products derived from this software without specific
+// prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// ****************************************************************************
+
+//
+//	Procedure Name:
+//	AEAlembicNodeTemplate
+//
+//	Description Name;
+//	Creates the attribute editor controls for the AlembicNode node
+//
+//	Input Value:
+//	nodeName
+//
+//	Output Value:
+//	None
+//
+
+
+// This is the procedure to open a file browser to choose a cache file
+//
+global proc AEAlembicFileBrowser( string $fileNameAttr )
+{
+    // prepare filter and starting dir for file dialog
+    string $filter = (uiRes("m_AEalembicNodeTemplate.kAlembic")) + " (*.abc);;"
+                      + (uiRes("m_AEalembicNodeTemplate.kAllFiles")) + " (*.*)";
+    if (size(`workspace -fileRuleEntry alembicCache`) == 0) {
+        workspace -fileRule "alembicCache" "cache/alembic";
+        workspace -saveWorkspace;
+    }
+    string $workspace = `workspace -fileRuleEntry alembicCache`;
+    $workspace = `workspace -expandName $workspace`;
+
+    // choose a file to import
+    string $result[] = `fileDialog2
+            -returnFilter 1
+            -fileFilter $filter
+            -dialogStyle 2
+            -caption (uiRes("m_AEalembicNodeTemplate.kAssignCacheFile"))
+            -startingDirectory $workspace
+            -fileMode 1
+            `;
+    if (size($result) == 0 || size($result[0]) == 0) {
+        // cancelled
+        return;
+    }
+
+    // set the file name attribute of the cache node
+    setAttr $fileNameAttr -type "string" $result[0];
+
+    // This will force an update to display the effects
+    // of the new cachefile.
+    //
+    currentTime `currentTime -q`;
+}
+
+// The following two procedures generate the UI for file name field
+//
+global proc AEAlembicNodeFileNameNew ( string $fileNameAttr )
+{
+	setUITemplate -pushTemplate attributeEditorTemplate;
+
+    columnLayout -adjustableColumn true;
+
+        rowLayout -numberOfColumns 3;
+            text -label (uiRes("m_AEalembicNodeTemplate.kAbcFile")) fileNameText;
+            textField fileNameField;
+                symbolButton -image "navButtonBrowse.png" browser;
+        setParent ..;
+
+//        rowLayout -numberOfColumns 3 -columnAttach3 both left both;
+//           separator -style none;  // push the symbol button to the 2nd column
+//            symbolButton -image "refresh.png" -annotation _L10N(kReload,"Reload the cache file") reloadButton;
+//        setParent ..;
+
+    setParent ..;
+
+    setUITemplate -popTemplate;
+
+	AEAlembicNodeFileNameReplace( $fileNameAttr );
+}
+
+global proc AEAlembicNodeFileNameReplace ( string $fileNameAttr )
+{
+	string $fileName = `getAttr $fileNameAttr`;
+    string $nodeName = `plugNode $fileNameAttr`;
+
+	// file name attribute
+	//
+    connectControl -fileName fileNameField $fileNameAttr;
+    button -e -c ("AEAlembicFileBrowser " + $fileNameAttr) browser;
+//    symbolButton -e -command ("gpuCache -e -refresh " + $nodeName) reloadButton;
+}
+
+global proc AEAlembicNodeTemplate( string $nodeName )
+{
+	editorTemplate -beginScrollLayout;
+	    editorTemplate -beginLayout (uiRes("m_AEalembicNodeTemplate.kAEAlembicAttributes")) -collapse 0;
+	        editorTemplate -callCustom AEAlembicNodeFileNameNew AEAlembicNodeFileNameReplace "abc_File";
+	        editorTemplate -addControl "startFrame";
+	        editorTemplate -addControl "endFrame";
+	        editorTemplate -addControl "time";
+	        editorTemplate -addControl "speed";
+	        editorTemplate -addControl "offset";
+	        editorTemplate -addControl "cycleType";
+	    editorTemplate -endLayout;
+	    AEdependNodeTemplate $nodeName;
+
+	    editorTemplate -addExtraControls;
+	editorTemplate -endScrollLayout;
+}

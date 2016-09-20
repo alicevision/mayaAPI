@@ -1,0 +1,92 @@
+#-
+# ==========================================================================
+# Copyright (c) 2011 Autodesk, Inc.
+# All rights reserved.
+# 
+# These coded instructions, statements, and computer programs contain
+# unpublished proprietary information written by Autodesk, Inc., and are
+# protected by Federal copyright law. They may not be disclosed to third
+# parties or copied or duplicated in any form, in whole or in part, without
+# the prior written consent of Autodesk, Inc.
+# ==========================================================================
+#+
+
+ifndef INCL_BUILDRULES
+
+#
+# Include platform specific build settings
+#
+TOP := ..
+include $(TOP)/buildrules
+
+
+#
+# Always build the local plug-in when make is invoked from the
+# directory.
+#
+all : plugins
+
+endif
+
+#
+# Variable definitions
+#
+
+SRCDIR := $(TOP)/dynExprField
+DSTDIR := $(TOP)/dynExprField
+
+dynExprField_SOURCES  := $(TOP)/dynExprField/dynExprField.cpp
+dynExprField_OBJECTS  := $(TOP)/dynExprField/dynExprField.o
+dynExprField_PLUGIN   := $(DSTDIR)/dynExprField.$(EXT)
+dynExprField_MAKEFILE := $(DSTDIR)/Makefile
+
+#
+# Include the optional per-plugin Makefile.inc
+#
+#    The file can contain macro definitions such as:
+#       {pluginName}_EXTRA_CFLAGS
+#       {pluginName}_EXTRA_C++FLAGS
+#       {pluginName}_EXTRA_INCLUDES
+#       {pluginName}_EXTRA_LIBS
+-include $(SRCDIR)/Makefile.inc
+
+
+#
+# Set target specific flags.
+#
+
+$(dynExprField_OBJECTS): CFLAGS   := $(CFLAGS)   $(dynExprField_EXTRA_CFLAGS)
+$(dynExprField_OBJECTS): C++FLAGS := $(C++FLAGS) $(dynExprField_EXTRA_C++FLAGS)
+$(dynExprField_OBJECTS): INCLUDES := $(INCLUDES) $(dynExprField_EXTRA_INCLUDES)
+
+depend_dynExprField:     INCLUDES := $(INCLUDES) $(dynExprField_EXTRA_INCLUDES)
+
+$(dynExprField_PLUGIN):  LFLAGS   := $(LFLAGS) $(dynExprField_EXTRA_LFLAGS) 
+$(dynExprField_PLUGIN):  LIBS     := $(LIBS)   -lOpenMaya -lOpenMayaFX -lFoundation $(dynExprField_EXTRA_LIBS) 
+
+#
+# Rules definitions
+#
+
+.PHONY: depend_dynExprField clean_dynExprField Clean_dynExprField
+
+
+$(dynExprField_PLUGIN): $(dynExprField_OBJECTS) 
+	-rm -f $@
+	$(LD) -o $@ $(LFLAGS) $^ $(LIBS)
+
+depend_dynExprField :
+	makedepend $(INCLUDES) $(MDFLAGS) -f$(DSTDIR)/Makefile $(dynExprField_SOURCES)
+
+clean_dynExprField:
+	-rm -f $(dynExprField_OBJECTS)
+
+Clean_dynExprField:
+	-rm -f $(dynExprField_MAKEFILE).bak $(dynExprField_OBJECTS) $(dynExprField_PLUGIN)
+
+
+plugins: $(dynExprField_PLUGIN)
+depend:	 depend_dynExprField
+clean:	 clean_dynExprField
+Clean:	 Clean_dynExprField
+

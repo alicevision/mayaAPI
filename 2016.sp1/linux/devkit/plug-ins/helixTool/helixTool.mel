@@ -1,0 +1,22 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+// Assumes helixTool.so is already loaded
+//
+helixToolContext helixToolContext1;
+setParent Shelf1;
+toolButton	-doubleClickCommand "toolPropertyWindow"
+			-cl toolCluster
+			-t helixToolContext1
+			-i1 "helixTool.xpm"
+			helixTool1;

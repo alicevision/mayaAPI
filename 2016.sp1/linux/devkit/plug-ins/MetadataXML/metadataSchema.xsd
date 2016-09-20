@@ -1,0 +1,96 @@
+<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema'
+           elementFormDefault='qualified'>
+
+  <!-- ====================================================== -->
+  <!-- Top level tag, the metadata, which encompasses all of  -->
+  <!-- the metadata associated with an object. Although it's  -->
+  <!-- possible to have multiple metadata definitions in a    -->
+  <!-- file only one is supported since the assignment of     -->
+  <!-- metadata to an object is a concept best left to the    -->
+  <!-- application using the metadata.                        -->
+  <!-- ====================================================== -->
+  <xs:element name='associations' type='Metadata'/>
+  <xs:complexType name='Metadata'>
+      <!-- ====================================================== -->
+      <!-- Metadata is a list of Channels. A zero length list is  -->
+      <!-- allowed even though there is no data to be stored.     -->
+      <!-- Interpretation of empty metadata is left to the app.   -->
+      <!-- ====================================================== -->
+      <xs:sequence minOccurs='0' maxOccurs='unbounded'>
+        <xs:element name='channel' type='Channel'/>
+      </xs:sequence>
+  </xs:complexType>
+
+  <!-- ====================================================== -->
+  <!-- Channels are just lists of Streams.                    -->
+  <!-- ====================================================== -->
+  <xs:complexType name='Channel'>
+      <!-- Channel name -->
+      <xs:element name='name' type='xs:string'/>
+
+      <!-- ====================================================== -->
+      <!-- A Channel is a name and list of Streams. A zero length -->
+	  <!-- list is allowed even though there is no data to be     -->
+	  <!-- stored. Interpretation of empty metadata is left to    -->
+	  <!-- the app.                                               -->
+      <!-- ====================================================== -->
+      <xs:sequence minOccurs='0' maxOccurs='unbounded'>
+        <xs:element name='stream' type='Stream'/>
+      </xs:sequence>
+  </xs:complexType>
+
+  <!-- ====================================================== -->
+  <!-- A Stream contains the actual metadata values. There    -->
+  <!-- may be multiple named Streams for each Channel. Zero   -->
+  <!-- Streams on a channel is a legal configuration which    -->
+  <!-- indicates that metadata will/can be added to that      -->
+  <!-- Channel in the future.                                 -->
+  <!-- ====================================================== -->
+  <xs:complexType name='Stream'>
+
+    <xs:sequence>
+      <!-- Stream name -->
+      <xs:element name='name' type='xs:string'/>
+
+      <!-- Name of the Structure defining the Stream data -->
+      <xs:element name='structure' type='xs:string'/>
+
+      <!-- Index Type used by metadata members. Must be one of  -->
+      <!-- the registered types, which can only be checked at   -->
+      <!-- runtime so any string is accepted by the schema.     -->
+      <!-- The default type when omitted is 'numeric'.          -->
+      <xs:element name='indexType' type='xs:string' minOccurs='0'/>
+
+      <!-- List of Stream metadata -->
+      <xs:sequence minOccurs='0' maxOccurs='unbounded'>
+        <xs:element name='data' type='Data'/>
+      </xs:sequence>
+    </xs:sequence>
+
+  </xs:complexType>
+
+  <!-- ====================================================== -->
+  <!-- Individual metadata elements in a Stream. The index    -->
+  <!-- value must match the indexType of the Stream, but that -->
+  <!-- determination can only be made a runtime so it is not  -->
+  <!-- addressed by the schema.  The names of the elements    -->
+  <!-- must match the names of the Structure members, which   -->
+  <!-- can also only be checked at runtime. All Structure     -->
+  <!-- member elements are optional, omission of which will   -->
+  <!-- result in that member assuming its default value, as   -->
+  <!-- contained in the Structure definition.                 -->
+  <!-- ====================================================== -->
+  <xs:complexType name='Data'>
+
+    <xs:sequence>
+      <!-- Stream value index -->
+      <xs:element name='index' type='xs:string'/>
+
+      <!-- Metadata values stored in unidentified elements      -->
+      <!-- whose names correspond to the Structure member names -->
+      <xs:any processContents='skip' minOccurs='0' maxOccurs='unbounded'/>
+    </xs:sequence>
+
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,422 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//
+//  Description:
+//      This script performs the GpuCacheImport command.
+//
+
+//
+//  Procedure Name:
+//      setOptionVars
+//
+//  Description:
+//      Initialize the option values.
+//
+//  Input Arguments:
+//      Whether to set the options to default values.
+//
+//  Return Value:
+//      None.
+proc setOptionVars(int $forceFactorySettings)
+{
+    // version 1
+    //
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_importFitTimeRange`) {
+        optionVar -intValue gpuCache_importFitTimeRange 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_importSetCurrentTimeToStartFrame`) {
+        optionVar -intValue gpuCache_importSetCurrentTimeToStartFrame 0;
+    }
+}
+
+//
+//  Procedure Name:
+//      gpuCache_importSetup
+//
+//  Description:
+//      Update the state of the option box UI to reflect the option values.
+//
+//  Input Arguments:
+//      parent               - Top level parent layout of the option box UI.
+//                             Required so that UI object names can be
+//                             successfully resolved.
+//
+//      forceFactorySettings - Whether the option values should be set to
+//                             default values.
+//
+//  Return Value:
+//      None.
+//
+global proc gpuCache_importSetup(string $parent, int $forceFactorySettings)
+{
+    //  Retrieve the option settings
+    //
+    setOptionVars($forceFactorySettings);
+
+    setParent $parent;
+
+    //  Query the optionVar's and set the values into the controls.
+    //
+    checkBoxGrp -e -value1 `optionVar -q gpuCache_importFitTimeRange`               fitTimeRange;
+    checkBoxGrp -e -value1 `optionVar -q gpuCache_importSetCurrentTimeToStartFrame` setCurrentTimeToStartFrame;
+}
+
+//
+//  Procedure Name:
+//      gpuCache_importCallback
+//
+//  Description:
+//      Update the option values with the current state of the option box UI.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box UI. Required so
+//                  that UI object names can be successfully resolved.
+//
+//      doIt      - Whether the command should execute.
+//
+//  Return Value:
+//      None.
+//
+global proc gpuCache_importCallback(string $parent, int $doIt)
+{
+    setParent $parent;
+
+    //  Set the optionVar's from the control values, and then
+    //  perform the command.
+    optionVar -intValue gpuCache_importFitTimeRange                `checkBoxGrp -q -value1 fitTimeRange`;
+    optionVar -intValue gpuCache_importSetCurrentTimeToStartFrame  `checkBoxGrp -q -value1 setCurrentTimeToStartFrame`;
+
+    if ($doIt) {
+        performGpuCacheImport 0;
+    }
+}
+
+//
+//  Procedure Name:
+//      importOptionsUI
+//
+//  Description:
+//      Construct the UI for option box or file options.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      Top level layout of the options UI.
+//
+proc string importOptionsUI(string $parent)
+{
+    //  The argument is used as the parent for the options UI
+    //
+    setParent $parent;
+
+    //  Activate the default UI template so that the layout of this
+    //  option box is consistent with the layout of the rest of the
+    //  application.
+    //
+    setUITemplate -pushTemplate DefaultTemplate;
+
+    //  Turn on the wait cursor.
+    //
+    waitCursor -state 1;
+
+    // Create option box or file options contents.
+    //
+    string $optionLayout = `scrollLayout`;
+        columnLayout -adjustableColumn true;
+
+            checkBoxGrp
+                    -numberOfCheckBoxes 1
+                    -label1 (uiRes("m_performGpuCacheImport.kFitTimeRange")) 
+                    fitTimeRange;
+            checkBoxGrp
+                    -numberOfCheckBoxes 1
+                    -label1 (uiRes("m_performGpuCacheImport.kSetCurrentTimeToStartFrame")) 
+                    setCurrentTimeToStartFrame;
+
+        setParent ..;
+    setParent ..;
+
+    //  Turn off the wait cursor.
+    //
+    waitCursor -state 0;
+
+    // Deactivate the default UI template
+    //
+    setUITemplate -popTemplate;
+
+    return $optionLayout;
+}
+
+//
+//  Procedure Name:
+//      importOptions
+//
+//  Description:
+//      Construct the option box UI. Involves accessing the standard option
+//      box and customizing the UI accordingly.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      None.
+//
+proc importOptions()
+{
+    //  Name of the command for this option box.
+    //
+    string $commandName = "GpuCacheImport";
+    string $label       = (uiRes("m_performGpuCacheImport.kImport"));
+
+    //  Build the option box actions.
+    //
+    string $callback = "gpuCache_importCallback";
+    string $setup    = "gpuCache_importSetup";
+
+    //  STEP 1:  Get the option box.
+    //  ============================
+    //
+    //  The value returned is the name of the layout to be used as
+    //  the parent for the option box UI.
+    //
+    string $layout = getOptionBox();
+
+    //  STEP 2:  Pass the command name to the option box.
+    //  =================================================
+    //
+    //  Any default option box behaviour based on the command name is set
+    //  up with this call. For example, updating the 'Help' menu item with
+    //  the name of the command.
+    //
+    setOptionBoxCommandName($commandName);
+
+    //  STEP 3:  Create option box contents.
+    //  ====================================
+    //
+    string $parent = importOptionsUI($layout);
+
+    //  STEP 4:  Customize the buttons.
+    //  ===============================
+    //
+    //  Provide more descriptive labels for the buttons.
+    //  Disable those buttons that are not applicable to the option box.
+    //  Attach actions to those buttons that are applicable to the option box.
+
+    // 'Import' button
+    //
+    string $importBtn = getOptionBoxApplyBtn();
+    button -e -label $label
+           -command ($callback + " " + $parent + " 1")
+           $importBtn;
+
+    // 'Save' button
+    //
+    string $saveBtn = getOptionBoxSaveBtn();
+    button -e
+           -command ($callback + " " + $parent + " 0; hideOptionBox")
+           $saveBtn;
+
+    // 'Reset' button
+    //
+    string $resetBtn = getOptionBoxResetBtn();
+    button -e
+           -command ($setup + " " + $parent + " 1")
+           $resetBtn;
+
+    //  STEP 5:  Set the option box title.
+    //  ==================================
+    //
+    setOptionBoxTitle((uiRes("m_performGpuCacheImport.kGpuCacheImportOptions")));
+
+    //  STEP 6:  Customize the 'Help' menu item text.
+    //  =============================================
+    //
+    setOptionBoxHelpTag($commandName);
+
+    //  Set the current values of the option box.
+    //  =========================================
+    //
+    eval ($setup + " " + $parent + " 0");
+
+    //  Show the option box.
+    //  ====================
+    //
+    showOptionBox();
+}
+
+//
+//  Procedure Name:
+//      captureGpuCacheImportOptionVars
+//
+//  Description:
+//      Capture the current state of option values to an argument list.
+//
+//  Input Arguments:
+//      version - The version of the argument list.
+//
+//  Return Value:
+//      A list of arguments to invoke AbcImport;
+//
+global proc string[] captureGpuCacheImportOptionVars(int $version)
+{
+    setOptionVars(0);
+    int $fitTimeRange                = `optionVar -q gpuCache_importFitTimeRange`;
+    int $setCurrentTimeToStartFrame  = `optionVar -q gpuCache_importSetCurrentTimeToStartFrame`;
+
+    string $args[] = {
+        "" + $fitTimeRange,
+        $setCurrentTimeToStartFrame
+    };
+
+    return $args;
+}
+
+//
+//  Procedure Name:
+//      assembleCmd
+//
+//  Description:
+//      Construct the command that will apply the option box values.
+//
+//  Input Arguments:
+//      None.
+//
+proc string assembleCmd()
+{
+    int $version = 1;
+    string $args[] = captureGpuCacheImportOptionVars($version);
+    string $cmd = "doGpuCacheImportArgList " + $version + " {";
+    int $i;
+    for ($i = 0; $i < size($args); $i++) {
+        if ($i > 0) $cmd += ",";
+        $cmd += ("\"" + encodeString($args[$i]) + "\"");
+    }
+    $cmd += "};";
+    return $cmd;
+}
+
+//
+//  Procedure Name:
+//      gpuCache_importFileOptionsUICreate
+//
+//  Description:
+//      Construct the file options UI.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc gpuCache_importFileOptionsUICreate(string $parent)
+{
+    importOptionsUI($parent);
+}
+
+//
+//  Procedure Name:
+//      gpuCache_importFileOptionsUIInit
+//
+//  Description:
+//      Update the state of the file options UI to reflect the option values.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//      filter    - The file type filter.
+//
+//  Return Value:
+//      None.
+//
+global proc gpuCache_importFileOptionsUIInit(string $parent, string $filter)
+{
+    gpuCache_importSetup $parent 0;
+}
+
+//
+//  Procedure Name:
+//      gpuCache_importFileOptionsUICommit
+//
+//  Description:
+//      Update the option values with the current state of the file options UI.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc gpuCache_importFileOptionsUICommit(string $parent)
+{
+    gpuCache_importCallback $parent 0;
+}
+
+//
+//  Procedure Name:
+//      performGpuCacheImport
+//
+//  Description:
+//      Perform the GpuCacheImport command using the corresponding
+//      option values. This procedure will also show the option box
+//      window if necessary as well as construct the command string
+//      that will invoke the sphere command with the current
+//      option box values.   
+//
+//  Input Arguments:
+//      0 - Execute the command.
+//      1 - Show the option box dialog.
+//      2 - Return the command.
+//
+//  Return Value:
+//      None.
+//
+global proc string performGpuCacheImport(int $action)
+{
+    string $cmd;
+
+    switch ($action)
+    {
+    //  Execute the command.
+    //
+    case 0:
+        //  Get the command.
+        //
+        $cmd = assembleCmd();
+
+        //  Execute the command with the option settings.
+        //
+        eval($cmd);
+
+        break;
+
+    //  Show the option box.
+    //
+    case 1:
+        //  Show the option box.
+        //
+        importOptions();
+        break;
+
+    //  Return the command string.
+    //
+    case 2:
+        //  Get the command.
+        //
+        $cmd = assembleCmd();
+        break;
+    }
+
+    return $cmd;
+}
+

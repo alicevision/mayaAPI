@@ -1,0 +1,63 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+global proc sseDeformer() 
+{
+	string $soPath;
+	string $soName;
+	if (`about -win`) {
+		$soPath   = apiSamplePluginLocation() + "sseDeformer.mll";
+		$soName   = "sseDeformer.mll";
+	}
+	else {
+		$soPath   = apiSamplePluginLocation() + "sseDeformer.so";
+		$soName   = "sseDeformer.so";
+	}
+	
+	// Load the plugin
+	//
+	if (!apiLoadPlugin($soPath, $soName)) {
+		apiError "Error loading plugin ";
+	}
+
+	string $objects[] = `ls -sl`;
+
+	int $num = size($objects);
+
+	for($i=0; $i<$num; $i++) {
+
+		// make sure it is a mesh!!
+		string $baseObject = $objects[$i];
+		string $nodeTypeName = `nodeType $baseObject`;
+		
+		if ($nodeTypeName != "transform") {
+			error ($baseObject + " is not a transform node\n");
+			return;
+		}
+		
+		string $shapeNodes[] = `listRelatives -s $baseObject`;
+		string $shapeNode = $shapeNodes[0];
+		
+		string $shapeNodeType = `nodeType $shapeNode`;
+		if($shapeNodeType != "mesh") {
+			error ($shapeNode + " must be a mesh\n");
+		}
+		select $shapeNode;
+		
+		if(catch(evalEcho("deformer -type sseDeformer"))) {
+			apiError "deformer -type sseDeformer command failed";
+			return;
+		}
+	}
+
+}

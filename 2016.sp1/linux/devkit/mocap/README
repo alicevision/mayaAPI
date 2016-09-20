@@ -1,0 +1,86 @@
+//-
+// ==========================================================================
+// Copyright 1995,2006,2008 Autodesk, Inc. All rights reserved.
+//
+// Use of this software is subject to the terms of the Autodesk
+// license agreement provided at the time of installation or download,
+// or which otherwise accompanies this software in either electronic
+// or hard copy form.
+// ==========================================================================
+//+
+
+Overview
+--------
+
+This is the README for the Maya motion capture server devkit.  Files in
+this directory let you to build two example motion capture servers called
+mayaClockServer and externServer.  You can also build two utility functions
+calle loopfile and mcp.
+
+Motion capture servers are separate processes that communicate with Maya 
+using sockets. A motion capture server creates a number of named channels. 
+Each channel is an independent data stream that has a type and a usage. 
+The server library (libmocap.a) handles the communications protocol 
+between the server and Maya.
+
+In addition, devices may be connected to Maya through a command port.  The
+Maya command port allows external programs to send commands to a running
+Maya session.  "mcp" is an example program that uses the Maya command 
+port interface.
+
+
+Table of Contents
+-----------------
+
+Makefile                The makefile file for the mayaClockServer targets 
+                        include:
+
+                                all:    make the mayaClockServer
+                                clean:  clean up this directory
+
+                        If Maya is not installed in the default directory 
+                        (/usr/autodesk/maya), change the variable BUILD_ROOT
+                        to reference $(MAYA_LOCATION) to set the location
+                        of the include files and server library
+
+README                  This file
+
+channelParse.README     The readme file for the channelParse config files.
+
+channelParse.c          Config file parser (example) used by externServer
+channelParse.h
+
+externServer.c          A server which reads motion capture data from a 
+                        file and or a pipe.
+
+loopfile.c              Writes lines from a file at a specified frame rate.
+                        Useful when debugging externServer, or to emulate
+                        realtime Maya motion capture setups.
+
+mayaClockServer.c       An example motion capture server that expresses
+                        the system time as three rotational channels--one
+                        each for the rotations of the hour, second, and 
+                        minute hands.  (See mayaClockDemo)
+
+mcp.c++                 A simple shell for sending commands to a Maya
+                        commandPort.  See commandPort in the online command
+                        documentation.
+
+rotTest.cfg             Example externServer config file
+rotTest.txt             Example data file for externServer or loopfile
+rotTestComp.cfg         Example for rotTest.txt treating each column as
+                        a scalar channel.
+
+
+See Also
+--------
+
+/usr/autodesk/maya/include/maya/mocap*.h
+                        The include files for the devkit
+/usr/autodesk/maya/lib/libmocap.a
+                        The server library
+
+and the full online motion capture documentation.
+
+
+

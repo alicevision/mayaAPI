@@ -1,0 +1,48 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+// Returns the list of existing model editor panels that have a valid
+// controller.
+global proc string[] gpuCacheListModelEditorPanels()
+{
+    string $editors[] = `lsUI -editors -long`;
+    string $result[];
+    
+    for ($editor in $editors) {
+
+        // Double check that the editor of type modelEditor which
+        // should correspond to an M3dView.
+        if ( `objectTypeUI -isType "modelEditor" $editor` ) {
+            if ( `modelEditor -q -ex $editor` ) {
+                string $control = `modelEditor -q -control $editor`;
+                string $panel   = `modelEditor -q -panel   $editor`;
+                
+                // An active modelEditor must have a valid
+                // controller. Note that for some scriptedPanel
+                // editor, the string "NONE" will be returned when no
+                // controller is actually connected. This is the case
+                // of the StereoPanelEditor for example.
+                if (size($control) > 0 && $control != "NONE" &&
+                    `control -q -ex $control`) {
+
+                    // Note that modelEditor don't necessarilly have
+                    // an associated panel. For example, the
+                    // narrowPolyViewer creates a modelEditor without
+                    // an associated panel! Fortunately, the
+                    // MUiMessage::add3dViewPostRenderMsgCallback()
+                    // API seems to accept either the panel name or
+                    // the editor name even though this is not
+                    // documented per se.
+                    $result[size($result)] = $editor;
+                }
+            }
+        }
+    }
+
+    return $result;
+}
+

@@ -1,0 +1,23 @@
+AWSubDir TOP platform linuxamd64 Components ExternalLibraries Qt 4.8.6 include QtHelp ;
+
+AWInstallHeader QHelpContentItem : install 3rd ;
+AWInstallHeader QHelpContentModel : install 3rd ;
+AWInstallHeader QHelpContentWidget : install 3rd ;
+AWInstallHeader QHelpEngine : install 3rd ;
+AWInstallHeader QHelpEngineCore : install 3rd ;
+AWInstallHeader QHelpGlobal : install 3rd ;
+AWInstallHeader QHelpIndexModel : install 3rd ;
+AWInstallHeader QHelpIndexWidget : install 3rd ;
+AWInstallHeader QHelpSearchEngine : install 3rd ;
+AWInstallHeader QHelpSearchQuery : install 3rd ;
+AWInstallHeader QHelpSearchQueryWidget : install 3rd ;
+AWInstallHeader QHelpSearchResultWidget : install 3rd ;
+AWInstallHeader QtHelp : install 3rd ;
+AWInstallHeader qhelp_global.h : install 3rd ;
+AWInstallHeader qhelpcontentwidget.h : install 3rd ;
+AWInstallHeader qhelpengine.h : install 3rd ;
+AWInstallHeader qhelpenginecore.h : install 3rd ;
+AWInstallHeader qhelpindexwidget.h : install 3rd ;
+AWInstallHeader qhelpsearchengine.h : install 3rd ;
+AWInstallHeader qhelpsearchquerywidget.h : install 3rd ;
+AWInstallHeader qhelpsearchresultwidget.h : install 3rd ;

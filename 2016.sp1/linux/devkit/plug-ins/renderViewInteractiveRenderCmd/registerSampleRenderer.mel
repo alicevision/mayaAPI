@@ -1,0 +1,344 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+// This file is intended to work together with the devkit
+// example plugin 'renderViewInteractiveRender'
+
+global int $sampleRendererIprMode = false;
+
+//  Procedure Name:
+//      registerSampleRenderer
+//
+//  Description:
+//		Procedure used to register all IPR related callbacks
+//      the render command offers.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      None.
+global proc registerSampleRenderer()
+{
+renderer
+    -rendererUIName                     "sampleRenderer"
+    -iprRenderProcedure                 "sampleRendererIprRender"
+    -iprOptionsProcedure                "sampleRendererIprOptionsWindow"
+    -isRunningIprProcedure              "sampleRendererIsRunningIpr"
+    -startIprRenderProcedure            "sampleRendererStartIprRender"
+    -stopIprRenderProcedure             "sampleRendererStopIprRender"
+    -refreshIprRenderProcedure          "sampleRendererRefreshIpr"
+    -pauseIprRenderProcedure            "sampleRendererPauseIprRender"
+    -changeIprRegionProcedure           "sampleRendererChangeIprRegion"
+    -iprOptionsMenuLabel                "Sample Renderer IPR Options"
+    -iprOptionsSubMenuProcedure         "sampleRendererIprUpdateOptionsSubMenu"
+    -iprRenderSubMenuProcedure          "sampleRendererIprUpdateRenderSubMenu"
+    -renderProcedure                    "sampleRendererRender"
+    -renderRegionProcedure              "mayaRenderRegion"
+    -addGlobalsTab                      "Common" "createMayaSoftwareCommonGlobalsTab" "updateMayaSoftwareCommonGlobalsTab"
+    SampleRenderer;
+}
+
+//  Procedure Name:
+//      sampleRendererIprRender
+//
+//  Description:
+//		Callback for the 'iprRenderProcedure' flag. It's sole purpose
+//      is to return the name of the render procedure the IPR
+//      session should use for the renderer being registered.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      string: The rendering procedure to be used during
+//              an IPR session.
+global proc string sampleRendererIprRender()
+{
+	return "sampleRendererRender";
+}
+
+//  Procedure Name:
+//      enableRandomColors
+//
+//  Description:
+//		Callback used to enable the 'random color' feature of the Sample Renderer.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      None.
+global proc enableRandomColors()
+{
+	renderViewInteractiveRender -e -rc true;
+}
+
+//  Procedure Name:
+//      disableRandomColors
+//
+//  Description:
+//		Callback used to disable the 'random color' feature of the Sample Renderer.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      None.
+global proc disableRandomColors()
+{
+	renderViewInteractiveRender -e -rc false;
+}
+
+//  Procedure Name:
+//      sampleRendererIprOptionsWindow
+//
+//  Description:
+//		Callback for the 'iprOptionsProcedure' flag. This callback
+//      is used to build the 'IPR Render Current Frame' options
+//      when they are requested.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      None.
+global proc sampleRendererIprOptionsWindow()
+{
+	if(`window -q -exists sampleRendererOptionsWindow`)
+	{
+		window -edit -visible true sampleRendererOptionsWindow;
+	}
+	else
+	{
+		window -title "Sample Renderer Options" -w 200 -h 20 -visible true sampleRendererOptionsWindow;
+		columnLayout -adjustableColumn true;
+			checkBox -onCommand "enableRandomColors"
+			         -offCommand "disableRandomColors"
+ 			         -label "Use random colors";
+	}
+}
+
+//  Procedure Name:
+//      sampleRendererIprRender
+//
+//  Description:
+//		Callback for the 'isRunningIprProcedure' flag. It is used
+//      by Maya to determine wheter the current renderer
+//      is running an IPR session.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      int: Returns non-zero if the registered renderer is currently
+// 		     running an IPR session, zero otherwise.
+global proc int sampleRendererIsRunningIpr()
+{
+	global int $sampleRendererIprMode;
+	return $sampleRendererIprMode;
+}
+
+//  Procedure Name:
+//      sampleRendererStartIprRender
+//
+//  Description:
+//		Callback for the 'startIprRenderProcedure' flag. This
+//      callback is executed when a user starts an IPR
+//      session with the current renderer.
+//
+//  Input Arguments:
+//      string editor: The fully qualified name of the Render View Window
+//      int width:     The width of the Render View
+//      int height:    The height of the Render View
+//      string camera: The name of the camera to be used for the IPR session
+//
+//  Return Value:
+//      None.
+global proc sampleRendererStartIprRender(string $editor,
+										 int $width, 
+										 int $height,
+										 string $camera)
+{	
+	global int $sampleRendererIprMode;
+	$sampleRendererIprMode = true;
+	renderViewInteractiveRender -ipr true -pause false;
+}
+
+//  Procedure Name:
+//      sampleRendererStopIprRender
+//
+//  Description:
+//		Callback for the 'stopIprRenderProcedure' flag. This
+//      callback is executed when a user stops an IPR
+//      session with the current renderer.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      None.
+global proc sampleRendererStopIprRender()
+{
+	global int $sampleRendererIprMode;
+	$sampleRendererIprMode = false;
+	renderViewInteractiveRender -e -ipr false;
+}
+
+//  Procedure Name:
+//      sampleRendererRefreshIpr
+//
+//  Description:
+//		Callback for the 'refreshIprRenderProcedure' flag. This
+//      callback is executed when a user explicitly requests
+//      the current IPR session to be refreshed.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      None.
+global proc sampleRendererRefreshIpr()
+{
+	renderViewInteractiveRender -ipr true -pause false;
+}
+
+//  Procedure Name:
+//      sampleRendererPauseIprRender
+//
+//  Description:
+//		Callback for the 'pauseIprRenderProcedure' flag. This
+//      callback is executed when a user pauses the current
+//      IPR session.
+//
+//  Input Arguments:
+//      string editor: The fully qualified name of the Render View Window
+//      int pause:     non-zero if the user is pausing the IPR session
+//                     zero if the user is continuing the IPR session
+//
+//  Return Value:
+//      None.
+global proc sampleRendererPauseIprRender(string $editor, int $pause)	
+{
+	// If the user is pausing the IPR session, we avoid updating
+	// the render view by calling in edit mode. If they're
+	// resuming an IPR session, we update the render view.
+	if($pause)
+	{
+		renderViewInteractiveRender -e -pause $pause;
+	}
+	else
+	{
+		renderViewInteractiveRender -pause $pause;
+	}
+}
+
+//  Procedure Name:
+//      sampleRendererChangeIprRegion
+//
+//  Description:
+//		Callback for the 'changeIprRegionProcedure' flag. This
+//      callback is executed when a user edits the render region
+//      defined for an IPR session.
+//
+//  Input Arguments:
+//      string editor: The fully qualified name of the Render View Window
+//
+//  Return Value:
+//      None.
+global proc sampleRendererChangeIprRegion(string $editor)	
+{
+	// We need to get the selected region directly from the
+	// defaultRenderGlobals node. This example updates the
+	// render view whenever the IPR region is changed however
+	// this isn't enforced by the IPR workflow.
+	string $cmd = "renderViewInteractiveRender"
+	+ " -lft "    + `getAttr defaultRenderGlobals.left`
+	+ " -rgt "    + `getAttr defaultRenderGlobals.rght`
+	+ " -tp "     + `getAttr defaultRenderGlobals.top`
+	+ " -bot "    + `getAttr defaultRenderGlobals.bot`;
+	
+	eval($cmd);
+}
+
+//  Procedure Name:
+//      sampleRendererIprUpdateOptionsSubMenu
+//
+//  Description:
+//		Callback for the 'iprOptionsSubMenuProcedure' flag. This callback
+//      is used to add menu items to the sub menu of the Render View
+//      IPR submenu 'IPR Render'.
+//      
+//  Input Arguments:
+//      string editor: The fully qualified name of the Render View Window
+//      int width:     The width of the Render View
+//      int height:    The height of the Render View
+//      string camera: The name of the camera to be used for the IPR session
+//
+//  Return Value:
+//      None.
+global proc sampleRendererIprUpdateOptionsSubMenu(string $editor,
+												  int $width, 
+												  int $height,
+												  string $camera)
+{
+	menuItem -label "SampleRenderer IPR update options sub menu1";
+	menuItem -label "SampleRenderer IPR update options sub menu2";
+	menuItem -label "SampleRenderer IPR update options sub menu3";
+}
+
+//  Procedure Name:
+//      sampleRendererIprUpdateRenderSubMenu
+//
+//  Description:
+//		Callback for the 'iprRenderSubMenuProcedure' flag. This callback
+//      is used to add menu items to the sub menu of the Render View
+//      IPR submenu 'IPR Render Options'.
+//      
+//  Input Arguments:
+//      string subMenu: The fully qualified name of the sub menu
+//      string editor:  The fully qualified name of the Render View Window
+//
+//  Return Value:
+//      None.
+global proc sampleRendererIprUpdateRenderSubMenu(string $subMenu, string $editor)
+{
+	popupMenu -edit -deleteAllItems $subMenu;
+	setParent -menu $subMenu;
+	menuItem -label "SampleRenderer IPR sub menu1";
+	menuItem -label "SampleRenderer IPR sub menu2";
+	menuItem -label "SampleRenderer IPR sub menu3";
+}
+
+//  Procedure Name:
+//      sampleRendererRender
+//
+//  Description:
+//		Callback for the 'renderProcedure' flag. This callback is used
+//      to start a rendering session in the Render View.
+//      
+//  Input Arguments:
+//      int width:      The width of the Render View
+//      int height:     The height of the Render View
+//      int doShadows:  true if the user is requesting the IPR session to render shadows
+//      int doGlowPass: true if the user is requesting the IPR session to render glow
+//      string camera:  The name of the camera to be used for the IPR session
+//      string option:  List of render options defined for the IPR session
+//
+//  Return Value:
+//      string: The rendering procedure to be used.
+global proc string sampleRendererRender(int $width, 
+										int $height,
+										int $doShadows,
+										int $doGlowPass,
+										string $camera, 
+										string $option)
+{
+	// Ignoring parameters since we hardcoded a lot of these in the sample plugin
+	renderViewInteractiveRender;
+	return "sampleRendererRender";
+}

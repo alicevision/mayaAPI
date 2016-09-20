@@ -1,0 +1,71 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+global proc attachColorNode()
+{
+	string	$baseName="cvColorShape1";
+	string	$object;
+	string	$objects[10];
+	
+	$objects=`ls -sl`;
+
+	for ($object in $objects) {
+		string	$shapeNodes[10];
+		string	$shapeNodeName;
+		string	$nodeTypeName;
+
+		$nodeTypeName = `nodeType $object`;
+		if ($nodeTypeName != "transform") {
+			error ($object + " is not a transform node\n");
+			continue;
+		}
+
+		$shapeNodes = `listRelatives -s $object`;
+
+		for ($shapeNodeName in $shapeNodes) {
+			string	$parentName;
+			string	$colourNodeName;
+
+			$nodeTypeName = `nodeType $shapeNodeName`;
+
+			if ($nodeTypeName == "nurbsCurve") {
+				error "nurbs curve objects not yet supported" ;
+				continue;
+			}
+
+			if ($nodeTypeName == "mesh") {
+				error "polygonal objects not yet supported" ;
+				continue;
+			}
+
+			// trace ("createNode cvColor -n "+$baseName+" -p "+$object+"\n");
+			$colourNodeName=`createNode cvColor -n $baseName -p $object`;
+			$destPlug   = $object + "|" + $colourNodeName + ".inputSurface";
+
+			switch ($nodeTypeName) {
+			case "nurbsSurface":
+				$sourcePlug = $shapeNodeName  + ".worldSpace";
+				// trace ("connectAttr "+$sourcePlug+" "+$destPlug+"\n");
+				connectAttr $sourcePlug $destPlug; 
+				break;
+			case "nurbsCurve":
+				break;
+			case "mesh":
+				break;
+			default:
+				// Do nothing
+				break;
+			}
+		}
+	}
+}

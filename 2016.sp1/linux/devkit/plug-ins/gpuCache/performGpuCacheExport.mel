@@ -1,0 +1,938 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//
+//  Description:
+//      This script performs the GpuCacheExportAll and
+//      GpuCacheExportSelection commands.
+//
+
+//
+//  Procedure Name:
+//      setOptionVars
+//
+//  Description:
+//      Initialize the option values.
+//
+//  Input Arguments:
+//      Whether to set the options to default values.
+//
+//  Return Value:
+//      None.
+proc setOptionVars(int $forceFactorySettings)
+{
+    // Version 1
+    //
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportCacheTimeRange`) {
+        optionVar -intValue gpuCache_exportCacheTimeRange 2;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportStart`) {
+        optionVar -floatValue gpuCache_exportStart 1;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportEnd`) {
+        optionVar -floatValue gpuCache_exportEnd 24;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportEvaluateEvery`) {
+        optionVar -floatValue gpuCache_exportEvaluateEvery 1;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportSaveEvery`) {
+        optionVar -intValue gpuCache_exportSaveEvery 1;
+    }
+
+    // Deprecated
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportFileNamePrefix`) {
+        // Auto-populate File name prefix
+        string $sceneName = `file -q -sceneName`;
+        if (size($sceneName) > 0) {
+            string $fileNamePrefix = (basenameEx($sceneName) + "_");
+            optionVar -stringValue gpuCache_exportFileNamePrefix $fileNamePrefix;
+        }
+        else {
+            optionVar -stringValue gpuCache_exportFileNamePrefix "";
+        }
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportOptimizeHierarchy`) {
+        optionVar -intValue gpuCache_exportOptimizeHierarchy 1;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportOptimizeThreshold`) {
+        optionVar -intValue gpuCache_exportOptimizeThreshold 40000;
+    }
+
+    // Version 2
+    //
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportWriteMaterials`) {
+        optionVar -intValue gpuCache_exportWriteMaterials 1;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportOptimizeAnimationsForMotionBlur`) {
+        optionVar -intValue gpuCache_exportOptimizeAnimationsForMotionBlur 0;
+    }
+
+    // Version 3
+    //
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportSaveMultipleFiles`) {
+        optionVar -intValue gpuCache_exportSaveMultipleFiles 0;
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportBaseFileName`) {
+        // Auto-populate base file name.
+        string $sceneName = `file -q -sceneName`;
+        if (size($sceneName) > 0) {
+            string $baseFileName = basenameEx($sceneName);
+            optionVar -stringValue gpuCache_exportBaseFileName $baseFileName;
+        }
+        else {
+            optionVar -stringValue gpuCache_exportBaseFileName "";
+        }
+    }
+
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportClashOption`) {
+        optionVar -intValue gpuCache_exportClashOption 1;
+    }
+
+    // Version 4 (2014ext1)
+    //
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportDataFormat`) {
+        optionVar -intValue gpuCache_exportDataFormat 2;
+    }
+
+    // Version 5 (2015)
+    //
+    if ($forceFactorySettings || !`optionVar -exists gpuCache_exportUseBaseTessellation`) {
+        optionVar -intValue gpuCache_exportUseBaseTessellation 0;
+    }
+}
+
+//
+//  Procedure Name:
+//      gpuCache_exportSetup
+//
+//  Description:
+//      Update the state of the option box UI to reflect the option values.
+//
+//  Input Arguments:
+//      showMultipleFiles    - Whether to show Save Multiple Files options.
+//
+//      forceFactorySettings - Whether the option values should be set to
+//                             default values.
+//
+//      parent               - Top level parent layout of the option box UI.
+//                             Required so that UI object names can be
+//                             successfully resolved.
+//
+//      filter               - The filter of the owner file dialog.
+//      
+//  Return Value:
+//      None.
+//
+global proc gpuCache_exportSetup(int $showMultipleFiles, int $forceFactorySettings, string $parent, string $filter)
+{
+    //  Retrieve the option settings
+    //
+    setOptionVars($forceFactorySettings);
+
+    setParent $parent;
+
+    //  Query the optionVar's and set the values into the controls.
+    //
+    int $cacheTimeRange = `optionVar -q gpuCache_exportCacheTimeRange`;
+    if ($cacheTimeRange == 1) {
+        radioButtonGrp -e -select 1 rangeRenderSettings;
+    } else if ($cacheTimeRange == 2) {
+        radioButtonGrp -e -select 1 rangeTimeSlider;
+    } else if ($cacheTimeRange == 3) {
+        radioButtonGrp -e -select 1 rangeStartEnd;
+    } else if ($cacheTimeRange == 4) {
+        radioButtonGrp -e -select 1 rangeCurrentFrame;
+    }
+    gpuCache_exportCacheTimeRangeChanged($parent);
+
+    if ($cacheTimeRange == 3) {
+        // Only update the float fields when mode is Start/End.
+        floatFieldGrp -e -value1 `optionVar -q gpuCache_exportStart` -value2 `optionVar -q gpuCache_exportEnd` startEnd;
+    }
+    floatFieldGrp -e -value1 `optionVar -q gpuCache_exportEvaluateEvery`     evaluateEvery;
+    intFieldGrp   -e -value1 `optionVar -q gpuCache_exportSaveEvery`         saveEvery;
+
+    if ($showMultipleFiles) {
+        checkBoxGrp  -e -value1 `optionVar -q gpuCache_exportSaveMultipleFiles` saveMultipleFiles;
+        textFieldGrp -e -text `optionVar -q gpuCache_exportBaseFileName`        baseFileName;
+        int $clashOption = `optionVar -q gpuCache_exportClashOption`;
+        if ($clashOption == 1) {
+            radioButtonGrp -e -select 1 clashNumericalIncrement;
+        } else if ($clashOption == 2) {
+            radioButtonGrp -e -select 1 clashNodeName;
+        }
+        gpuCache_exportSaveMultipleFilesChanged($parent);
+    }
+
+    checkBoxGrp   -e -value1 `optionVar -q gpuCache_exportOptimizeHierarchy` optimizeHierarchy;
+    intFieldGrp   -e -value1 `optionVar -q gpuCache_exportOptimizeThreshold` optimizeThreshold;
+    gpuCache_exportOptimizeHierarchyChanged($parent);
+
+    checkBoxGrp -e -value1 `optionVar -q gpuCache_exportWriteMaterials`                  writeMaterials;
+    checkBoxGrp -e -value1 `optionVar -q gpuCache_exportOptimizeAnimationsForMotionBlur` optimizeAnimationsForMotionBlur;
+
+    int $dataFormat = `optionVar -q gpuCache_exportDataFormat`;
+    if ($dataFormat == 1) {
+        radioButtonGrp -e -select 1 dataFormatHDF5;
+    } else if ($dataFormat == 2) {
+        radioButtonGrp -e -select 1 dataFormatOgawa;
+    }
+
+    int $useBaseTessellation = `optionVar -q gpuCache_exportUseBaseTessellation`;
+    if ($useBaseTessellation) {
+        radioButtonGrp -e -select 1 tessellationBase;
+    }
+    else {
+        radioButtonGrp -e -select 1 tessellationSmooth;
+    }
+}
+
+//
+//  Procedure Name:
+//      gpuCache_exportCallback
+//
+//  Description:
+//      Update the option values with the current state of the option box UI.
+//
+//  Input Arguments:
+//      exportAll          - Whether to export the entire scene or only selected objects.
+//
+//      showMultipleFiles  - Whether to show Save Multiple Files options.
+//
+//      doIt               - Whether the command should execute.
+//
+//      parent             - Top level parent layout of the option box UI. Required so
+//                           that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc gpuCache_exportCallback(int $exportAll, int $showMultipleFiles, int $doIt, string $parent)
+{
+    setParent $parent;
+
+    //  Set the optionVar's from the control values, and then
+    //  perform the command.
+    int $cacheTimeRange = 2;
+    if (`radioButtonGrp -q -select rangeRenderSettings`) {
+        $cacheTimeRange = 1;
+    } else if (`radioButtonGrp -q -select rangeTimeSlider`) {
+        $cacheTimeRange = 2;
+    } else if (`radioButtonGrp -q -select rangeStartEnd`) {
+        $cacheTimeRange = 3;
+    } else if (`radioButtonGrp -q -select rangeCurrentFrame`) {
+        $cacheTimeRange = 4;
+    }
+    optionVar -intValue gpuCache_exportCacheTimeRange $cacheTimeRange;
+
+    optionVar -floatValue gpuCache_exportStart         `floatFieldGrp -q -value1 startEnd`;
+    optionVar -floatValue gpuCache_exportEnd           `floatFieldGrp -q -value2 startEnd`;
+    optionVar -floatValue gpuCache_exportEvaluateEvery `floatFieldGrp -q -value1 evaluateEvery`;
+    optionVar -intValue   gpuCache_exportSaveEvery     `intFieldGrp   -q -value1 saveEvery`;
+
+    if ($showMultipleFiles) {
+        optionVar -intValue    gpuCache_exportSaveMultipleFiles `checkBoxGrp -q -value1 saveMultipleFiles`;
+        optionVar -stringValue gpuCache_exportBaseFileName      `textFieldGrp -q -text baseFileName`;
+        int $clashOption = 1;
+        if (`radioButtonGrp -q -select clashNumericalIncrement`) {
+            $clashOption = 1;
+        } else if (`radioButtonGrp -q -select clashNodeName`) {
+            $clashOption = 2;
+        }
+        optionVar -intValue gpuCache_exportClashOption $clashOption;
+    }
+
+    optionVar -intValue   gpuCache_exportOptimizeHierarchy `checkBoxGrp -q -value1 optimizeHierarchy`;
+    optionVar -intValue   gpuCache_exportOptimizeThreshold `intFieldGrp -q -value1 optimizeThreshold`;
+
+    optionVar -intValue   gpuCache_exportWriteMaterials                  `checkBoxGrp -q -value1 writeMaterials`;
+    optionVar -intValue   gpuCache_exportOptimizeAnimationsForMotionBlur `checkBoxGrp -q -value1 optimizeAnimationsForMotionBlur`;
+
+    int $dataFormat = 1;
+    if (`radioButtonGrp -q -select dataFormatHDF5`) {
+        $dataFormat = 1;
+    } else if (`radioButtonGrp -q -select dataFormatOgawa`) {
+        $dataFormat = 2;
+    }
+    optionVar -intValue gpuCache_exportDataFormat $dataFormat;
+
+    int $useBaseTessellation = 0;
+    if (`radioButtonGrp -q -select tessellationBase`) {
+        $useBaseTessellation = 1;
+    } else if (`radioButtonGrp -q -select tessellationSmooth`) {
+        $useBaseTessellation = 0;
+    }
+    optionVar -intValue gpuCache_exportUseBaseTessellation $useBaseTessellation;
+
+    if ($doIt) {
+        performGpuCacheExport 0 $exportAll;
+    }
+}
+
+//
+//  Procedure Name:
+//      gpuCache_exportOptionsUI
+//
+//  Description:
+//      Construct the UI for option box or file options.
+//
+//  Input Arguments:
+//      showMultipleFiles    - Whether to show Save Multiple Files options.
+//
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      Top level layout of the options UI.
+//
+global proc string gpuCache_exportOptionsUI(int $showMultipleFiles, string $parent)
+{
+    //  The argument is used as the parent for the options UI
+    //
+    setParent $parent;
+
+    //  Activate the default UI template so that the layout of this
+    //  option box is consistent with the layout of the rest of the
+    //  application.
+    //
+    setUITemplate -pushTemplate DefaultTemplate;
+
+    //  Turn on the wait cursor.
+    //
+    waitCursor -state 1;
+
+    // Create option box or file options contents.
+    //
+    string $optionLayout = `scrollLayout`;
+    columnLayout -adjustableColumn true;
+
+        int $labelWidth = 200;
+
+        radioButtonGrp
+                -numberOfRadioButtons 1
+                -label (uiRes("m_performGpuCacheExport.kCacheTimeRange")) 
+                -label1 (uiRes("m_performGpuCacheExport.kCurrentFrame"))
+                -changeCommand1 ("gpuCache_exportCacheTimeRangeChanged " + $optionLayout)
+                -columnWidth 1 $labelWidth
+                rangeCurrentFrame;
+        radioButtonGrp
+                -numberOfRadioButtons 1
+                -label1 (uiRes("m_performGpuCacheExport.kRenderSettings"))
+                -shareCollection rangeCurrentFrame
+                -changeCommand1 ("gpuCache_exportCacheTimeRangeChanged " + $optionLayout)
+                -columnWidth 1 $labelWidth
+                rangeRenderSettings;
+        radioButtonGrp
+                -numberOfRadioButtons 1
+                -label1 (uiRes("m_performGpuCacheExport.kTimeSlider")) 
+                -shareCollection rangeCurrentFrame
+                -changeCommand1 ("gpuCache_exportCacheTimeRangeChanged " + $optionLayout)
+                -columnWidth 1 $labelWidth
+                rangeTimeSlider;
+        radioButtonGrp
+                -numberOfRadioButtons 1
+                -label1 (uiRes("m_performGpuCacheExport.kStartEnd")) 
+                -shareCollection rangeCurrentFrame
+                -changeCommand1 ("gpuCache_exportCacheTimeRangeChanged " + $optionLayout)
+                -columnWidth 1 $labelWidth
+                rangeStartEnd;
+        floatFieldGrp
+                -numberOfFields 2
+                -label (uiRes("m_performGpuCacheExport.kStartEnd2")) 
+                -columnWidth 1 $labelWidth
+                startEnd;
+        floatFieldGrp
+                -numberOfFields 1
+                -label (uiRes("m_performGpuCacheExport.kEvaluateEvery")) 
+                -extraLabel (uiRes("m_performGpuCacheExport.kFrames"))
+                -columnWidth 1 $labelWidth
+                evaluateEvery;
+        intFieldGrp
+                -numberOfFields 1
+                -label (uiRes("m_performGpuCacheExport.kSaveEvery")) 
+                -extraLabel (uiRes("m_performGpuCacheExport.kEvaluations"))
+                -columnWidth 1 $labelWidth
+                saveEvery;
+
+        if ($showMultipleFiles) {
+            checkBoxGrp
+                    -numberOfCheckBoxes 1
+                    -label (uiRes("m_performGpuCacheExport.kSaveMultipleFiles"))
+                    -changeCommand1 ("gpuCache_exportSaveMultipleFilesChanged " + $optionLayout)
+                    -columnWidth 1 $labelWidth
+                    saveMultipleFiles;
+            textFieldGrp
+                    -label (uiRes("m_performGpuCacheExport.kBaseFileName"))
+                    -columnWidth 1 $labelWidth
+                    -visible false
+                    baseFileName;
+            radioButtonGrp
+                    -numberOfRadioButtons 1
+                    -label (uiRes("m_performGpuCacheExport.kClashOptions"))
+                    -label1 (uiRes("m_performGpuCacheExport.kIncrementFilenames"))
+                    -columnWidth 1 $labelWidth
+                    clashNumericalIncrement;
+            radioButtonGrp
+                    -numberOfRadioButtons 1
+                    -label1 (uiRes("m_performGpuCacheExport.kNodeNameSuffix"))
+                    -shareCollection clashNumericalIncrement
+                    -columnWidth 1 $labelWidth
+                    clashNodeName;
+        }
+
+        separator -style "none" -height 15;
+
+        checkBoxGrp
+                -numberOfCheckBoxes 1
+                -label (uiRes("m_performGpuCacheExport.kOptimizeHierarchy"))
+                -changeCommand1 ("gpuCache_exportOptimizeHierarchyChanged " + $optionLayout)
+                -columnWidth 1 $labelWidth
+                optimizeHierarchy;
+        intFieldGrp
+                -numberOfFields 1
+                -label (uiRes("m_performGpuCacheExport.kOptimizationThreshold"))
+                -extraLabel (uiRes("m_performGpuCacheExport.kVertices"))
+                -columnWidth 1 $labelWidth
+                optimizeThreshold;
+        checkBoxGrp
+                -numberOfCheckBoxes 1
+                -label (uiRes("m_performGpuCacheExport.kOptimizeAnimationsForMotionBlur"))
+                -columnWidth 1 $labelWidth
+                optimizeAnimationsForMotionBlur;
+
+        separator -style "none" -height 15;
+
+        checkBoxGrp
+                -numberOfCheckBoxes 1
+                -label (uiRes("m_performGpuCacheExport.kWriteMaterials"))
+                -columnWidth 1 $labelWidth
+                writeMaterials;
+
+        separator -style "none" -height 15;
+
+        radioButtonGrp
+                -numberOfRadioButtons 1
+                -label (uiRes("m_performGpuCacheExport.kTessellation"))
+                -label1 (uiRes("m_performGpuCacheExport.kUseSmoothing"))
+                -annotation (uiRes("m_performGpuCacheExport.kUseSmoothingTessellationAnnot"))
+                -columnWidth 1 $labelWidth
+                tessellationSmooth;
+        radioButtonGrp
+                -numberOfRadioButtons 1
+                -label1 (uiRes("m_performGpuCacheExport.kUseBaseTessellation"))
+                -annotation (uiRes("m_performGpuCacheExport.kUseBaseTessellationAnnot"))
+                -shareCollection tessellationSmooth
+                -columnWidth 1 $labelWidth
+                tessellationBase;
+
+        separator -style "none" -height 15;
+        
+        radioButtonGrp
+                -numberOfRadioButtons 1
+                -label (uiRes("m_performGpuCacheExport.kFileFormat"))
+                -label1 (uiRes("m_performGpuCacheExport.kDataFormatHDF5Label"))
+                -annotation (uiRes("m_performGpuCacheExport.kDataFormatHDF5Annot"))
+                -columnWidth 1 $labelWidth
+                dataFormatHDF5;
+        radioButtonGrp
+                -numberOfRadioButtons 1
+                -label1 (uiRes("m_performGpuCacheExport.kDataFormatOgawaLabel"))
+                -annotation (uiRes("m_performGpuCacheExport.kDataFormatOgawaAnnot"))
+                -shareCollection dataFormatHDF5
+                -columnWidth 1 $labelWidth
+                dataFormatOgawa;
+    setParent ..;
+
+    // Attach callbacks to update Start/End fields.
+    //
+    scriptJob -parent $optionLayout
+        -event "timeChanged" ("gpuCache_exportCacheTimeRangeChanged " + $optionLayout);
+    scriptJob -parent $optionLayout
+        -event "playbackRangeChanged" ("gpuCache_exportCacheTimeRangeChanged " + $optionLayout);
+    scriptJob -parent $optionLayout
+        -attributeChange "defaultRenderGlobals.startFrame" ("gpuCache_exportCacheTimeRangeChanged " + $optionLayout);
+    scriptJob -parent $optionLayout
+        -attributeChange "defaultRenderGlobals.endFrame" ("gpuCache_exportCacheTimeRangeChanged " + $optionLayout);
+
+    //  Turn off the wait cursor.
+    //
+    waitCursor -state 0;
+
+    // Deactivate the default UI template
+    //
+    setUITemplate -popTemplate;
+
+    return $optionLayout;
+}
+
+//
+//  Procedure Name:
+//      gpuCache_exportCacheTimeRangeChanged
+//
+//  Description:
+//      Callback procedure when the state of Cache Time Range radio
+//      button group has been changed.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc gpuCache_exportCacheTimeRangeChanged(string $parent)
+{
+    setParent $parent;
+
+    // enable/disable start/end float fields
+    //
+    if (`radioButtonGrp -q -select rangeStartEnd`) {
+        floatFieldGrp -e -enable 1 startEnd;
+    } else {
+        floatFieldGrp -e -enable 0 startEnd;
+    }
+
+    // Update start/end float fields.
+    //
+    if (`radioButtonGrp -q -select rangeRenderSettings`) {
+        floatFieldGrp -e -value1 (`getAttr defaultRenderGlobals.startFrame`)
+                         -value2 (`getAttr defaultRenderGlobals.endFrame`)
+                         startEnd;
+    }
+    else if (`radioButtonGrp -q -select rangeTimeSlider`) {
+        floatFieldGrp -e -value1 (`playbackOptions -q -min`)
+                         -value2 (`playbackOptions -q -max`)
+                         startEnd;
+    }
+    else if (`radioButtonGrp -q -select rangeCurrentFrame`) {
+        floatFieldGrp -e -value1 (`currentTime -q`)
+                         -value2 (`currentTime -q`)
+                         startEnd;
+    }
+}
+
+//
+//  Procedure Name:
+//      gpuCache_exportSaveMultipleFilesChanged
+//
+//  Description:
+//      Callback procedure when the state of Save Multiple Files
+//      check box has been changed.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc gpuCache_exportSaveMultipleFilesChanged(string $parent)
+{
+    setParent $parent;
+
+    // Enable/disable sub options.
+    //
+    int $enable = `checkBoxGrp -q -value1 saveMultipleFiles`;
+    textFieldGrp -e -enable $enable baseFileName;
+    radioButtonGrp -e -enable $enable clashNumericalIncrement;
+    radioButtonGrp -e -enable $enable clashNodeName;
+}
+
+//
+//  Procedure Name:
+//      gpuCache_exportOptimizeHierarchyChanged
+//
+//  Description:
+//      Callback procedure when the state of Optimize Hierarchy checkbox has been changed.
+//
+//  Input Arguments:
+//      parent    - Top level parent layout of the option box or file options UI.
+//                  Required so that UI object names can be successfully resolved.
+//
+//  Return Value:
+//      None.
+//
+global proc gpuCache_exportOptimizeHierarchyChanged(string $parent)
+{
+    setParent $parent;
+
+    // enable/disable Optimize Threshold
+    //
+    if (`checkBoxGrp -q -value1 optimizeHierarchy`) {
+        intFieldGrp -e -enable 1 optimizeThreshold;
+        checkBoxGrp -e -enable 1 optimizeAnimationsForMotionBlur;
+    }
+    else {
+        intFieldGrp -e -enable 0 optimizeThreshold;
+        checkBoxGrp -e -enable 0 optimizeAnimationsForMotionBlur;
+    }
+}
+
+//
+//  Procedure Name:
+//      exportOptions
+//
+//  Description:
+//      Construct the option box UI. Involves accessing the standard option
+//      box and customizing the UI accordingly.
+//
+//  Input Arguments:
+//      exportAll - Whether to export the entire scene or only selected objects.
+//
+//  Return Value:
+//      None.
+//
+proc exportOptions(int $exportAll)
+{
+    //  Name of the command for this option box.
+    //
+    string $commandName;
+    if ($exportAll) {
+        $commandName = "GpuCacheExportAll";
+    }
+    else {
+        $commandName = "GpuCacheExportSelection";
+    }
+
+    //  Build the option box actions.
+    //
+    string $callback = "gpuCache_exportCallback";
+    string $setup    = "gpuCache_exportSetup";
+    
+    // Determine whether we are exporting multi-hierarchy or single-hierarchy
+    //
+    int $showMultipleFiles = 0;
+    if (!$exportAll) {
+        string $nodes[] = `getGpuCacheExportNodeList`;
+        $showMultipleFiles = (size($nodes) > 1);
+    }
+
+    //  STEP 1:  Get the option box.
+    //  ============================
+    //
+    //  The value returned is the name of the layout to be used as
+    //  the parent for the option box UI.
+    //
+    global string $gOptionBoxOptions;
+    $gOptionBoxOptions = "noApplyAndClose";  // No Apply
+    string $layout = getOptionBox();
+
+    //  STEP 2:  Pass the command name to the option box.
+    //  =================================================
+    //
+    //  Any default option box behaviour based on the command name is set
+    //  up with this call. For example, updating the 'Help' menu item with
+    //  the name of the command.
+    //
+    setOptionBoxCommandName($commandName);
+
+    //  STEP 3:  Create option box contents.
+    //  ====================================
+    //
+    string $parent = `gpuCache_exportOptionsUI $showMultipleFiles $layout`;
+
+    // Show Base File Name text field in options box. (Invisible in File Dialog)
+    if ($showMultipleFiles) {
+        setParent $parent;
+        textFieldGrp -e -visible true baseFileName;
+    }
+
+    //  STEP 4:  Customize the buttons.
+    //  ===============================
+    //
+    //  Provide more descriptive labels for the buttons.
+    //  Disable those buttons that are not applicable to the option box.
+    //  Attach actions to those buttons that are applicable to the option box.
+
+    // 'Export' button
+    //
+    string $exportBtn = getOptionBoxApplyBtn();
+    button -e -label (uiRes("m_performGpuCacheExport.kExport"))
+           -command ($callback + " " + $exportAll + " " + $showMultipleFiles + " 1 " + $parent + "; hideOptionBox")
+           $exportBtn;
+
+    // 'Save' button
+    //
+    string $saveBtn = getOptionBoxSaveBtn();
+    button -e
+           -command ($callback + " " + $exportAll + " 0 0 " + $parent + "; hideOptionBox")
+           $saveBtn;
+
+    // 'Reset' button
+    //
+    string $resetBtn = getOptionBoxResetBtn();
+    button -e
+           -command ($setup + " " + $showMultipleFiles + " 1 " + $parent + " \"\"")
+           $resetBtn;
+
+    //  STEP 5:  Set the option box title.
+    //  ==================================
+    //
+    setOptionBoxTitle((uiRes("m_performGpuCacheExport.kGpuCacheExportOptions")));
+
+    //  STEP 6:  Customize the 'Help' menu item text.
+    //  =============================================
+    //
+    setOptionBoxHelpTag($commandName);
+
+    //  Set the current values of the option box.
+    //  =========================================
+    //
+    eval ($setup + " " + $showMultipleFiles + " 0 " + $parent + " \"\"");
+
+    //  Show the option box.
+    //  ====================
+    //
+    showOptionBox();
+
+    // Remove the base file name option var, it shouldn't be saved.
+    optionVar -remove gpuCache_exportBaseFileName;
+}
+
+//
+//  Procedure Name:
+//      getGpuCacheExportNodeList
+//
+//  Description:
+//      Determine which nodes to export.
+//
+//  Input Arguments:
+//      None.
+//
+//  Return Value:
+//      An array of nodes.
+//
+global proc string[] getGpuCacheExportNodeList()
+{
+    // Determine which nodes to export
+    return python("getGpuCacheExportNodeList()");
+}
+
+// MEL doesn't support string hashing so we use python for better scalability.
+// Only one global method should be declared in python context.
+python(
+	"import maya.cmds as gpuCacheExportNodeListCmds\n" +
+	"def getGpuCacheExportNodeList():\n" +
+	"    nodes    = gpuCacheExportNodeListCmds.ls(selection = True, long = True)\n" +
+	"    nodesSet = set(nodes)\n" +
+	"    # Remove child/descendent nodes\n" +
+	"    newNodes = []\n" +
+	"    for longName in nodes:\n" +
+	"        steps      = longName.split('|')\n" +
+	"        parentName = steps[0]\n" +
+	"        parentSel  = False\n" +
+	"        for i in range(1, len(steps)-1):\n" +
+	"           parentName = parentName + '|' + steps[i]\n" +
+	"           if parentName in nodesSet:\n" +
+	"               parentSel = True\n" +
+	"               break\n" +
+	"        if not parentSel:\n" +
+	"            newNodes.append(longName)\n" +
+	"    nodes    = newNodes\n" +
+	"    nodesSet = set(newNodes)\n" +
+	"    # Check there is bakeable geometry\n" +
+	"    newNodes = []\n" +
+	"    for longName in nodes:\n" +
+	"        bakeables = gpuCacheExportNodeListCmds.listRelatives(longName, " +
+	"            fullPath = True, allDescendents = True, " +
+	"            type = ['mesh', 'nurbsSurface', 'subdiv', 'gpuCache'])\n" +
+	"        hasGeom = False\n" +
+	"        if bakeables is not None:\n" +
+	"            for bakeable in bakeables:\n" +
+	"                if not gpuCacheExportNodeListCmds.getAttr(bakeable + '.io'):\n" +
+	"                    hasGeom = True\n" +
+	"                    break\n" +
+	"            if hasGeom:\n" +
+	"                newNodes.append(longName)\n" +
+	"    return newNodes"
+);
+
+//
+//  Procedure Name:
+//      captureGpuCacheExportOptionVars
+//
+//  Description:
+//      Capture the current state of option values to an argument list.
+//
+//  Input Arguments:
+//      exportAll - Whether to export the entire scene or only selected objects.
+//
+//  Return Value:
+//      A list of arguments to invoke AbcExport.
+//
+global proc string[] captureGpuCacheExportOptionVars(int $version, int $exportAll)
+{
+    setOptionVars(0);
+    int    $cacheTimeRange            = `optionVar -q gpuCache_exportCacheTimeRange`;
+    float  $start                     = `optionVar -q gpuCache_exportStart`;
+    float  $end                       = `optionVar -q gpuCache_exportEnd`;
+    float  $evaluateEvery             = `optionVar -q gpuCache_exportEvaluateEvery`;
+    int    $saveEvery                 = `optionVar -q gpuCache_exportSaveEvery`;
+    string $fileNamePrefix            = `optionVar -q gpuCache_exportFileNamePrefix`;
+    int    $optimizeHierarchy         = `optionVar -q gpuCache_exportOptimizeHierarchy`;
+    int    $optimizeThreshold         = `optionVar -q gpuCache_exportOptimizeThreshold`;
+
+    string $args[] = {
+        "" + $exportAll,
+        $cacheTimeRange,
+        $start,
+        $end,
+        $evaluateEvery,
+        $saveEvery,
+        $fileNamePrefix,
+        $optimizeHierarchy,
+        $optimizeThreshold
+    };
+
+    if ($version >= 2) {
+        int $writeMaterials                  = `optionVar -q gpuCache_exportWriteMaterials`;
+        int $optimizeAnimationsForMotionBlur = `optionVar -q gpuCache_exportOptimizeAnimationsForMotionBlur`;
+
+        string $argsVer2[] = {
+            "" + $writeMaterials,
+            $optimizeAnimationsForMotionBlur
+        };
+
+        appendStringArray($args, $argsVer2, 2);
+    }
+
+    if ($version >= 3) {
+        int    $saveMultipleFiles = `optionVar -q gpuCache_exportSaveMultipleFiles`;
+        string $baseFileName      = `optionVar -q gpuCache_exportBaseFileName`;
+        int    $clashOption       = `optionVar -q gpuCache_exportClashOption`;
+
+        string $argsVer3[] = {
+            "" + $saveMultipleFiles,
+            $baseFileName,
+            $clashOption
+        };
+
+        appendStringArray($args, $argsVer3, 3);
+    }
+
+    if ($version >= 4) {
+        int $dataFormat = `optionVar -q gpuCache_exportDataFormat`;
+
+        string $argsVer4[] = {
+            "" + $dataFormat
+        };
+
+        appendStringArray($args, $argsVer4, 1);
+    }
+
+    if ($version >= 5) {
+        int $useBaseTessellation = `optionVar -q gpuCache_exportUseBaseTessellation`;
+
+        string $argsVer5[] = {
+            "" + $useBaseTessellation
+        };
+
+        appendStringArray($args, $argsVer5, 1);
+    }
+
+    return $args;
+}
+
+//
+//  Procedure Name:
+//      assembleCmd
+//
+//  Description:
+//      Construct the command that will apply the option box values.
+//
+//  Input Arguments:
+//      exportAll - Whether to export the entire scene or only selected objects.
+//
+proc string assembleCmd(int $exportAll)
+{
+    int $version = 5;
+    string $args[] = captureGpuCacheExportOptionVars($version, $exportAll);
+    string $cmd = "doGpuCacheExportArgList " + $version + " {";
+    int $i;
+    for ($i = 0; $i < size($args); $i++) {
+        if ($i > 0) $cmd += ",";
+        $cmd += ("\"" + encodeString($args[$i]) + "\"");
+    }
+    $cmd += "};";
+    return $cmd;
+}
+
+//
+//  Procedure Name:
+//      performGpuCacheExport
+//
+//  Description:
+//      Perform the GpuCacheExportAll or GpuCacheExportSelection command using the
+//      corresponding option values. This procedure will also show the option box
+//      window if necessary as well as construct the command string
+//      that will invoke the sphere command with the current
+//      option box values.   
+//
+//  Input Arguments:
+//      0 - Execute the command.
+//      1 - Show the option box dialog.
+//      2 - Return the command.
+//
+//      exportAll - Whether to export the entire scene or only selected objects.
+//
+//  Return Value:
+//      None.
+//
+global proc string performGpuCacheExport(int $action, int $exportAll)
+{
+    string $cmd;
+
+    switch ($action)
+    {
+    //  Execute the command.
+    //
+    case 0:
+        // If the Dialog Style is OS Native, instead of auto-populate the
+        // file name prefix, we use an empty string.
+        if (`optionVar -q FileDialogStyle` == 1 && 
+                !`optionVar -exists gpuCache_exportFileNamePrefix`) {
+            optionVar -stringValue gpuCache_exportFileNamePrefix "";
+        }
+
+        //  Get the command.
+        //
+        $cmd = assembleCmd($exportAll);
+
+        //  Execute the command with the option settings.
+        //
+        eval($cmd);
+
+        break;
+
+    //  Show the option box.
+    //
+    case 1:
+        //  Show the option box.
+        //
+        exportOptions($exportAll);
+        break;
+
+    //  Return the command string.
+    //
+    case 2:
+        //  Get the command.
+        //
+        $cmd = assembleCmd($exportAll);
+        break;
+    }
+
+    return $cmd;
+}
+

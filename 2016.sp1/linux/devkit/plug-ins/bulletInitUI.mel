@@ -1,0 +1,729 @@
+// Copyright (C) 1997-2014 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+//
+//  Description:
+//      This script is run automatically when the MayaBullet plug-in is 
+//      loaded during an interactive Maya session.
+//
+
+python "import maya.app.mayabullet as mayabullet";
+python "import maya.app.mayabullet.BulletUtils as BulletUtils";
+python "import maya.app.mayabullet.RigidBody as RigidBody";
+python "import maya.app.mayabullet.RigidBodyConstraint as RigidBodyConstraint";
+python "import maya.app.mayabullet.SoftBody as SoftBody";
+python "import maya.app.mayabullet.SoftBodyConstraint as SoftBodyConstraint";
+python "import maya.app.mayabullet.Ragdoll as Ragdoll";
+python "import maya.app.mayabullet.MayaUtils as MayaUtils";
+python "import maya.app.mayabullet.MayaDynamicsIntegration";
+python "import maya.app.mayabullet.AlembicExport as AlembicExport";
+
+// ============================
+// MENUS
+// ============================
+
+proc addBulletMenus()
+{
+    global string $gMainWindow;
+
+    string $bulletMainMenu       = "bullet_MainMenu";
+    string $softRigidBodyMenu    = "bullet_SoftRigidBodyMenu";  
+    string $constraintMenu       = "bullet_ConstraintsMenu";
+    string $setVertexPropsMenu   = "bullet_SetVertexPropertiesMenu";    
+    string $paintVertexPropsMenu = "bullet_PaintVertexPropertiesMenu";  
+    string $rigidSetsMenu        = "bullet_RigidSetsMenu";
+    string $exportMenu           = "bullet_ExportMenu";
+
+    // main menu
+    setParent $gMainWindow;
+	
+	// Create the bullet menu and parent it to the main window.
+	// Do not show the menu if the current menu set is not dynamics.
+	//
+    menu -label (uiRes("m_bulletInitUI.kBulletMenuTitle")) -to true -familyImage "menuIconBullet.png" -vis false $bulletMainMenu;
+
+	menuSet -e -addMenu $bulletMainMenu dynamicsMenuSet;
+
+	// If current menu set is dynamics, show the bullet menu
+	// Also shift the menu to the end of the dynamic menus.
+	//
+	if (`menuSet -q -currentMenuSet` == "dynamicsMenuSet") {
+		int $pos = size(`menuSet -q -menuArray commonMenuSet`) + size(`menuSet -q -menuArray dynamicsMenuSet`);
+		window -e -menuIndex $bulletMainMenu $pos $gMainWindow;
+		menu -e -vis true $bulletMainMenu;
+	}
+
+	menuItem -divider true -dividerLabel (uiRes("m_bulletInitUI.kBulletCreate"));
+	
+    // submenu
+    menuItem -label (uiRes("m_bulletInitUI.kCreateActiveRB"))
+        -annotation (uiRes("m_bulletInitUI.kCreateActiveRBAnnot"))
+        -command ( "python \"import maya.app.mayabullet.BulletUtils as BulletUtils; BulletUtils.checkPluginLoaded(); import maya.app.mayabullet.RigidBody as RigidBody; RigidBody.CreateRigidBody(True).executeCommandCB()\"" )
+        -image "bullet_rigidActive.png"
+        bullet_CreateActiveRigidBodyItem;
+		menuItem -optionBox true -image "bullet_rigidActive.png"
+				-annotation (uiRes("m_bulletInitUI.kCreateActiveRBOpt")) 
+				-command ( "python \"RigidBody.CreateRigidBody(True).createOptionDialog()\"" )
+				bullet_CreateActiveRigidBodyItemOB;
+
+    menuItem -label (uiRes("m_bulletInitUI.kCreatePassiveRB"))
+        -annotation (uiRes("m_bulletInitUI.kCreatePassiveRBAnnot"))
+        -command ( "python \"RigidBody.CreateRigidBody(False).executeCommandCB()\"" )
+        -image "bullet_rigidPassive.png"
+        bullet_CreatePassiveRigidBodyItem;
+		menuItem -optionBox true -image "bullet_rigidPassive.png"
+				-annotation (uiRes("m_bulletInitUI.kCreatePassiveRBOpt")) 
+				-command ( "python \"import maya.app.mayabullet.BulletUtils as BulletUtils; BulletUtils.checkPluginLoaded(); import maya.app.mayabullet.RigidBody as RigidBody; RigidBody.CreateRigidBody(False).createOptionDialog()\"" )
+				bullet_CreatePassiveRigidBodyItemOB;
+
+	menuItem -label (uiRes("m_bulletInitUI.kCreateRagdoll"))  
+        -annotation (uiRes("m_bulletInitUI.kCreateRagdollAnnot"))
+        -command "python \"import maya.app.mayabullet.BulletUtils as BulletUtils; BulletUtils.checkPluginLoaded(); import maya.app.mayabullet.Ragdoll as Ragdoll; Ragdoll.CreateRagdoll().executeCommandCB()\""
+        -image "bullet_createRagdoll.png"
+        bullet_CreateRagdollFromSkeletonItem;   
+		menuItem -optionBox true -image "bullet_createRagdoll.png"
+				-annotation (uiRes("m_bulletInitUI.kCreateRagdollOpt")) 
+				-command ( "python \"Ragdoll.CreateRagdoll().createOptionDialog()\"" )
+				bullet_CreateRagdollItemOB;
+				
+    menuItem -label (uiRes("m_bulletInitUI.kCreateSB"))
+        -annotation (uiRes("m_bulletInitUI.kCreateSBAnnot"))
+        -command ( "python \"import maya.app.mayabullet.BulletUtils as BulletUtils; BulletUtils.checkPluginLoaded(); import maya.app.mayabullet.SoftBody as SoftBody; SoftBody.CreateSoftBody().executeCommandCB()\"" )
+        -image "bullet_soft.png"
+        bullet_CreateSoftBodyItem;
+		menuItem -optionBox true -image "bullet_soft.png"
+				-annotation (uiRes("m_bulletInitUI.kCreateSBOpt"))
+				-command ( "python \"SoftBody.CreateSoftBody().createOptionDialog()\"" )
+				bullet_CreateSoftBodyDialogItem;
+
+	menuItem -divider true;
+
+    menuItem -label (uiRes("m_bulletInitUI.kCreateRBSet"))
+        -annotation (uiRes("m_bulletInitUI.kCreateRBSetAnnot"))
+        -command ( "python \"import maya.app.mayabullet.BulletUtils as BulletUtils; BulletUtils.checkPluginLoaded(); import maya.app.mayabullet.RigidBody as RigidBody; RigidBody.CreateRigidSet().executeCommandCB(True)\"" )
+        -image "bullet_rigidSet.png"
+        bullet_CreateRigidSetItem;
+		menuItem -optionBox true -image "bullet_rigidSet.png"
+				-annotation (uiRes("m_bulletInitUI.kCreateRBSetOpt")) 
+				-command ( "python \"RigidBody.CreateRigidSet().createOptionDialog()\"" )
+				bullet_CreateRigidSetItemOB;
+
+    menuItem -divider true;
+	
+    menuItem -label (uiRes("m_bulletInitUI.kCreateRBConstraint"))
+        -annotation (uiRes("m_bulletInitUI.kCreateRBConstraintAnnot"))
+        -command ( "python \"import maya.app.mayabullet.BulletUtils as BulletUtils; BulletUtils.checkPluginLoaded(); import maya.app.mayabullet.RigidBodyConstraint as RigidBodyConstraint; RigidBodyConstraint.CreateRigidBodyConstraint().executeCommandCB()\"" )
+        -image "bullet_rigidConstraint.png"
+        bullet_CreateRigidBodyConstraintItem;
+		menuItem -optionBox true -image "bullet_rigidConstraint.png"
+				-annotation (uiRes("m_bulletInitUI.kCreateRBConstraintOpt"))
+				-command ( "python \"RigidBodyConstraint.CreateRigidBodyConstraint().createOptionDialog()\"" )
+				bullet_CreateRigidBodyConstraintItemOB;
+
+    menuItem -label (uiRes("m_bulletInitUI.kCreateSBAnchor"))
+        -annotation (uiRes("m_bulletInitUI.kCreateAnchorAnnot"))
+        -command ( "python \"import maya.app.mayabullet.BulletUtils as BulletUtils; BulletUtils.checkPluginLoaded(); import maya.app.mayabullet.SoftBodyConstraint as SoftBodyConstraint; SoftBodyConstraint.createSoftBodyAnchorConstraint()\"" )
+        -image "bullet_createSoftBodyAnchor.png"
+        bullet_CreateSoftAnchorConstraintItem;  
+
+    menuItem -divider true -dividerLabel (uiRes("m_bulletInitUI.kBulletEdit"));
+	
+	// Rigid Set Sub Menu
+    menuItem -subMenu true -label (uiRes("m_bulletInitUI.kRigidSets")) -to true -familyImage "bullet_rigidSet.png" $rigidSetsMenu;
+	
+    	menuItem -divider true -dividerLabel (uiRes("m_bulletInitUI.kMembership"));
+		menuItem -label (uiRes("m_bulletInitUI.kAddToRigidSet")) 
+			-version 2015
+			-annotation (uiRes("m_bulletInitUI.kAddToRigidSetAnnot"))
+			-image "bullet_rigidSet.png"
+			-command ( "python \"RigidBody.CreateRigidSet.addToRigidSet()\"" )
+			bullet_RigidSets_AddToSetItem;
+
+		menuItem -label (uiRes("m_bulletInitUI.kRemoveFromRigidSet")) 
+			-version 2015
+			-annotation (uiRes("m_bulletInitUI.kRemoveFromRigidSetAnnot"))
+			-image "bullet_rigidSet.png"
+			-command ( "python \"RigidBody.CreateRigidSet.removeFromRigidSet()\"" )
+			bullet_RigidSets_RemoveFromSetItem;
+
+		menuItem -label (uiRes("m_bulletInitUI.kExtractFromRigidSet"))
+			-version 2015
+			-annotation (uiRes("m_bulletInitUI.kExtractFromRigidSetAnnot"))
+			-command ( "python \"RigidBody.CreateRigidSet.extractFromRigidSet()\"" )
+			-image "bullet_rigidSet.png"
+			bullet_ExtractFromRigidSetItem;
+	
+		menuItem -divider true -dividerLabel (uiRes("m_bulletInitUI.kModify"));
+		
+		menuItem -label (uiRes("m_bulletInitUI.kEmptyRigidSet")) 
+			-version 2015
+			-annotation (uiRes("m_bulletInitUI.kEmptyRigidSetAnnot"))
+			-image "bullet_rigidSet.png"
+			-command ( "python \"RigidBody.CreateRigidSet.clearRigidSets()\"" )
+			bullet_RigidSets_ClearRigidSetItem;
+		menuItem -label (uiRes("m_bulletInitUI.kDeleteRigidSet")) 
+			-version 2015
+			-annotation (uiRes("m_bulletInitUI.kDeleteRigidSetAnnot"))
+			-image "bullet_rigidSet.png"
+			-command ( "python \"RigidBody.CreateRigidSet.deleteRigidSets()\"" )
+			bullet_RigidSets_DeleteRigidSetItem;
+
+		menuItem -divider true -dividerLabel (uiRes("m_bulletInitUI.kInitialState"));
+		
+		menuItem -label (uiRes("m_bulletInitUI.kSetInitialState")) 
+			-annotation (uiRes("m_bulletInitUI.kSetInitialStateAnnot"))
+			-image "bullet_rigidSet.png"
+			-command ( "python \"RigidBody.CreateRigidSet.setInitialState()\"" )
+			bullet_RigidSets_SetInitialStateItem;
+
+		menuItem -label (uiRes("m_bulletInitUI.kResetInitialState")) 
+			-annotation (uiRes("m_bulletInitUI.kResetInitialStateAnnot"))
+			-image "bullet_rigidSet.png"
+			-command ( "python \"RigidBody.CreateRigidSet.resetInitialState()\"" )
+			bullet_RigidSets_ResetInitialStateItem;
+
+		menuItem -label (uiRes("m_bulletInitUI.kSeleteInitialState")) 
+			-version 2015
+			-annotation (uiRes("m_bulletInitUI.kSeleteInitialStateAnnot"))
+			-image "bullet_rigidSet.png"
+			-command ( "python \"RigidBody.CreateRigidSet.selectInitialState()\"" )
+			bullet_RigidSets_SelectInitialStateItem;
+    setParent -m ..;
+
+	// Soft Body Vertec Properties Sub Menu
+	menuItem -subMenu true 
+			 -label (uiRes("m_bulletInitUI.kSetSBProps")) 
+			 -to true 
+			 -familyImage "nClothPaintMap.png" 
+			 $setVertexPropsMenu;
+		
+		menuItem -divider true -dividerLabel (uiRes("m_bulletInitUI.kSetSBPropSet"));
+		
+	    menuItem -label (uiRes("m_bulletInitUI.kSetMassProp")) 
+			-annotation (uiRes("m_bulletInitUI.kSetMassPropAnnot"))
+			-image "bullet_setPerParticleSoftBodyMass.png"
+			-command ( "python \"import maya.app.mayabullet.BulletUtils as BulletUtils; BulletUtils.checkPluginLoaded(); import maya.app.mayabullet.SoftBody as SoftBody; SoftBody.setSoftBodyPerParticleMass()\"" )        
+			bullet_SetVertexProperty_MassItem;
+		
+		menuItem -label (uiRes("m_bulletInitUI.kSetLinearStiffnessProp")) 
+			-annotation (uiRes("m_bulletInitUI.kSetLinearStiffnessPropAnnot"))
+			-image "bullet_setPerParticleSoftBodyLinearStiffness.png"
+			-command ( "python \"SoftBody.setSoftBodyPerParticleLinearStiffness()\"" )        
+			bullet_SetVertexProperty_LinearStiffnessItem;
+		
+		menuItem -label (uiRes("m_bulletInitUI.kSetBendResistanceProp")) 
+			-annotation (uiRes("m_bulletInitUI.kSetBendResistancePropAnnot"))
+			-image "bullet_setPerParticleSoftBodyBendResistance.png"
+			-command ( "python \"SoftBody.setSoftBodyPerParticleBendResistance()\"" )        
+			bullet_SetVertexProperty_BendResistanceItem;
+			
+		menuItem -divider true -dividerLabel (uiRes("m_bulletInitUI.kSetSBPropPaint"));
+		
+		menuItem -label (uiRes("m_bulletInitUI.kPaintMassProp")) 
+			-annotation (uiRes("m_bulletInitUI.kPaintMassPropAnnot"))
+			-image "bullet_paintPerParticleSoftBodyMass.png"
+			-command ( "python \"import maya.app.mayabullet.BulletUtils as BulletUtils; BulletUtils.checkPluginLoaded(); import maya.app.mayabullet.SoftBody as SoftBody; SoftBody.paintSoftBodyVertexProperty('particleMass')\"" )        
+			bullet_PaintVertexProperty_MassItem;
+
+		menuItem -label (uiRes("m_bulletInitUI.kPaintLinearStiffnessProp")) 
+			-annotation (uiRes("m_bulletInitUI.kPaintLinearStiffnessPropAnnot"))
+			-image "bullet_paintPerParticleSoftBodyLinearStiffness.png"
+			-command ( "python \"SoftBody.paintSoftBodyVertexProperty('particleLinearStiffness')\"" )        
+			bullet_PaintVertexProperty_LinearStiffnessItem;
+
+			menuItem -label (uiRes("m_bulletInitUI.kPaintBendResistanceProp")) 
+			-annotation (uiRes("m_bulletInitUI.kPaintBendResistancePropAnnot"))
+			-image "bullet_paintPerParticleSoftBodyBendResistance.png"
+			-command ( "python \"SoftBody.paintSoftBodyVertexProperty('particleBendResistance')\"" )        
+			bullet_PaintVertexProperty_BendResistanceItem;
+
+    setParent -m ..;
+
+	menuItem -label (uiRes("m_bulletInitUI.kAddCollider"))  
+        -annotation (uiRes("m_bulletInitUI.kAddColliderAnnot"))
+        -command "python \"Ragdoll.AddColliders().executeCommandCB()\""
+        -image "bullet_createColliders.png"
+        bullet_AddCollidersToSkeletonItem;  
+		menuItem -optionBox true -image "bullet_createColliders.png"
+				-annotation (uiRes("m_bulletInitUI.kAddColliderOpt")) 
+				-command ( "python \"Ragdoll.AddColliders().createOptionDialog()\"" )
+				bullet_AddCollidersItemOB;
+
+    menuItem -divider true -dividerLabel (uiRes("m_bulletInitUI.kBulletExport"));
+
+    menuItem -label (uiRes("m_bulletInitUI.kExportSelected")) 
+        -annotation (uiRes("m_bulletInitUI.kExportSelectedAnnot"))
+        -image "menuIconBullet.png"
+        -command ( "python \"AlembicExport.exportSelected()\"" )
+        bullet_AlembicExport_ExportSelected;
+
+	menuItem -label (uiRes("m_bulletInitUI.kExportAll")) 
+        -annotation (uiRes("m_bulletInitUI.kExportAllAnnot"))
+        -image "menuIconBullet.png"
+        -command ( "python \"AlembicExport.exportAll()\"" )
+        bullet_AlembicExport_ExportAll;
+
+    menuItem -divider true -dividerLabel (uiRes("m_bulletInitUI.kBulletSolver"));
+
+    menuItem -label (uiRes("m_bulletInitUI.kSelectSolver")) 
+        -annotation (uiRes("m_bulletInitUI.kSelectSolverAnnot"))
+        -image "bullet_selectSolverNode.png"
+        -command ( "python \"import maya.app.mayabullet.BulletUtils as BulletUtils; BulletUtils.checkPluginLoaded(); BulletUtils.selectSolver()\"" )
+        bullet_SelectSolverItem;
+
+    menuItem -label (uiRes("m_bulletInitUI.kRemoveBulletObjects")) 
+        -annotation (uiRes("m_bulletInitUI.kRemoveBulletObjectsAnnot"))
+        -command ( "python \"BulletUtils.removeBulletObjectsFromList()\"" )
+        bullet_RemoveBulletObjectsItem;
+
+    menuItem -label (uiRes("m_bulletInitUI.kDeleteBulletSystem")) 
+        -annotation (uiRes("m_bulletInitUI.kDeleteBulletSystemAnnot"))
+        -command ( "bullet_DeleteEntireSystem" )
+        bullet_DeleteSystemItem;
+
+    menuItem -divider true -dividerLabel (uiRes("m_bulletInitUI.kHelp"));
+
+    menuItem -label (uiRes("m_bulletInitUI.kBulletHelp")) 
+        -annotation (uiRes("m_bulletInitUI.kBulletHelpAnnot"))
+        -command "showHelp Bullet"
+        bullet_BulletHelpItem;
+
+    setParent -m ..; // for main menu
+}
+
+
+proc removeBulletMenus()
+{
+    // Delete menu if it exists
+    if (`menu -ex bullet_MainMenu`) {
+        deleteUI -menu bullet_MainMenu;
+    }
+}
+
+
+// ============================
+// SHELF
+// ============================
+
+proc addBulletShelf()
+{
+    global string $gShelfTopLevel;
+
+    // Do not change this string without modifying shelfLabel.mel 
+    //
+    string $shelfName = "Bullet"; // consider making global var
+    string $shelfButtonPrefix = "bullet_shelf_";
+
+    // Make sure Bullet Shelf Exists, create if not
+    string $st, $shelfTabs[] = `shelfTabLayout -q -childArray $gShelfTopLevel`;
+    for ($st in $shelfTabs)
+    {
+        if ($st == $shelfName)
+            return;
+    }
+
+    // The Bullet shelf has not been created yet.  Create it here.
+    // Store current shelf, as calling addNewShelf will change it.
+    int $currentShelfNum = `tabLayout -q -sti $gShelfTopLevel`;
+
+    // Add the new shelf
+    addNewShelfTab($shelfName);
+
+    // Restore original current shelf
+    tabLayout -e -sti $currentShelfNum $gShelfTopLevel;
+    optionVar -iv selectedShelf $currentShelfNum;
+
+    // Add Shelf Buttons
+
+    // From Existing menus (if items exist)
+    string $menuItems[] = {
+         "bullet_CreateActiveRigidBodyItem"
+        ,"bullet_CreateRigidSetItem"
+        ,"bullet_CreatePassiveRigidBodyItem"
+        ,"bullet_CreateSoftBodyItem"
+        ,"bullet_CreateRigidBodyConstraintItem"
+        ,"bullet_CreateSoftAnchorConstraintItem"
+        ,"bullet_SetVertexProperty_MassItem"
+        ,"bullet_PaintVertexProperty_MassItem"
+        ,"bullet_AddCollidersToSkeletonItem"
+        ,"bullet_CreateRagdollFromSkeletonItem"
+        ,"bullet_SelectSolverItem"
+        ,"bullet_InteractivePlaybackItem"
+        //,""
+        };
+    string $menuItem;
+
+    // Push/pop currentShelf to make sure menus are added to the right one
+    string $currentShelf = `tabLayout -q -st $gShelfTopLevel`;
+    tabLayout -e -st $shelfName $gShelfTopLevel;
+    for ($menuItem in $menuItems) {
+        menuItemToShelf $menuItem;
+        // == rename shelfbutton to proper naming "bullet_shelf_*"
+        string $tmpShelfButtons[] = `shelfLayout -q -childArray $shelfName`;
+        if (!size($tmpShelfButtons))
+            continue;
+
+        string $shelfButton_old = $tmpShelfButtons[`size $tmpShelfButtons`-1];
+        // copy last one
+        shelfButton 
+            -command            `shelfButton -q -command $shelfButton_old`
+            -doubleClickCommand `shelfButton -q -doubleClickCommand $shelfButton_old`
+            -image1             `shelfButton -q -image1 $shelfButton_old`
+            -imageOverlayLabel  `shelfButton -q -imageOverlayLabel $shelfButton_old`
+            -label              ((uiRes("m_bulletInitUI.kSolverProperties"))+`shelfButton -q -label $shelfButton_old`)
+            -style              `shelfButton -q -style $shelfButton_old`
+            -width              `shelfButton -q -width $shelfButton_old`
+            -height             `shelfButton -q -height $shelfButton_old`
+            -ann                `shelfButton -q -ann $shelfButton_old`
+            ($shelfButtonPrefix+$shelfButton_old);
+        deleteUI $shelfButton_old;
+    }
+    tabLayout -e -st $currentShelf $gShelfTopLevel;
+}
+
+// ===========================================================
+// Register node help coming custom location.
+// ===========================================================
+
+proc registerNodeHelp()
+{
+	string $nodeTypes[] = `pluginInfo -q -dependNode "bullet"`;
+
+	for ($nodeType in $nodeTypes)
+	{
+		string $nodeHelp = ("showHelp \"" + $nodeType + "\"");
+		addAttributeEditorNodeHelp( $nodeType, $nodeHelp );
+	}
+}
+
+// ===========================================================
+// CreateUI/DeleteUI functions called by plugin on load/unload
+// ===========================================================
+
+// global used to store MEL path before override
+global string $g_MayaBullet_CutCopyPastePath_Orig = "";
+
+
+//---------------------------------------------------------------------------
+// Given the raw result from the whatIs command, returns just the path
+// to the MEL script. This is a MEL wrapper to call into Python to do
+// a little string manipulation. 
+//---------------------------------------------------------------------------
+proc string rawScriptResultToPath (string $rawResult) {
+    python("from maya.app.mayabullet import MayaUtils");
+    string $tmp = ( "\"" + $rawResult + "\"" ); 
+    return `python(("MayaUtils.rawScriptResultToPath(" + $tmp + ")"))`;
+}
+
+//---------------------------------------------------------------------------
+// Given the node return siblings, parent argument is optional pass "" if
+// you don't have it.
+//---------------------------------------------------------------------------
+proc string[] listSiblings(string $node, string $parent) {
+    if (size($parent)==0)
+        $parent = `listRelatives -parent $node`;
+    string $siblings[] = `listRelatives -children $parent`;
+    return `stringArrayRemove {$node} $siblings`;
+}
+
+//---------------------------------------------------------------------------
+// Called on plug-in load.
+//---------------------------------------------------------------------------
+global proc bullet_CreateUI()
+{
+    // Make sure that the UI is deleted before creating it
+    bullet_DeleteUI();
+
+    // Create Bullet Menu
+    addBulletMenus();
+    addBulletShelf();
+    registerNodeHelp();
+
+    // Register paint attributes
+    makePaintable -attrType "doubleArray" "bulletSoftBodyShape" "particleMass";
+    makePaintable -attrType "doubleArray" "bulletSoftBodyShape" "particleLinearStiffness";
+    makePaintable -attrType "doubleArray" "bulletSoftBodyShape" "particleBendResistance";
+    
+    // override Cut-Copy-Paste with customized version (and save the original
+    // to restore on unload
+    global string $g_MayaBullet_CutCopyPastePath_Orig;
+    string $rawResult = `whatIs cutCopyPaste.mel`;
+    $g_MayaBullet_CutCopyPastePath_Orig = rawScriptResultToPath( $rawResult );
+    //string $replacementScriptPath 
+    //    = `python "MayaUtils.getScriptDir()"` + "others/cutCopyPaste.mel";
+    eval( "source bulletCutCopyPaste.mel" );
+
+	// Register our callback for "connectDynamic" command
+	python("maya.app.mayabullet.MayaDynamicsIntegration.addDynamicConnectHook()");
+}
+
+
+//---------------------------------------------------------------------------
+// Called on plug-in unload.
+//---------------------------------------------------------------------------
+global proc bullet_DeleteUI()
+{
+    removeBulletMenus();
+
+    // restore the original MEL procs
+    global string $g_MayaBullet_CutCopyPastePath_Orig;
+    if ( size($g_MayaBullet_CutCopyPastePath_Orig) > 0 ) {
+        eval( "source \"" + $g_MayaBullet_CutCopyPastePath_Orig + "\"" );
+    }
+	
+	// Remove our callback for "connectDynamic" command
+	python("maya.app.mayabullet.MayaDynamicsIntegration.removeDynamicConnectHook");
+}
+
+//---------------------------------------------------------------------------
+// return first mesh found in depth first search traversing groupParts
+//---------------------------------------------------------------------------
+proc string[] find_first_mesh(string $node)
+{
+    $groupParts = `listConnections -d true -s false -type "groupParts" $node`;
+
+    if (`size $groupParts`)
+    {
+        for ($gp in $groupParts)
+        {
+             $meshes = find_first_mesh($gp);
+             if (`size $meshes`)
+             {
+                 return $meshes;
+             }
+        }
+    }
+
+    return `listConnections -d true -s false -type "mesh" $node`;
+}
+
+//---------------------------------------------------------------------------
+// Delete all Bullet solvers, rigid and soft bodies and their constraints.
+//---------------------------------------------------------------------------
+global proc bullet_DeleteEntireSystem ()
+{
+    string $toDelete[];
+
+    // Remove the constraints first so that we don't have 
+    // computes that fails because of missing inputs.
+    string $bulletConstraints[] = `ls -type "bulletRigidBodyConstraintShape" -type "bulletSoftConstraintShape"`;
+    for ($bulletConstraint in $bulletConstraints)
+    {
+        $parent = `listRelatives -p $bulletConstraint`;
+        if (`size $parent`)
+            $toDelete[(size($toDelete))] = stringArrayToString($parent, ",");
+    }
+
+    if (`size $toDelete`)
+        delete $toDelete;
+		
+    // Remove the fields that are only connected to Bullet objects.
+    $fields = `ls -type "field"`;
+    if (`size $fields`)
+    {
+        $toDelete = {};
+
+		for ($f in $fields)
+		{	
+			int $skip = 0;
+			$destinations = `listConnections -source false -shapes true $f`;
+			$destinations = stringArrayRemoveDuplicates($destinations);
+			for ($d in $destinations)
+			{
+				$type = `objectType $d`;
+				if ($type != "bulletRigidBodyShape" &&
+				    $type != "bulletSoftBodyShape"  &&
+					$type != "bulletSolverShape")
+				{
+					$skip = 1;
+					break;
+				}
+			}
+			if (!$skip)
+			{
+				$toDelete[(size($toDelete))] = $f;
+			}
+		}
+
+		if (size($toDelete))
+			delete $toDelete;
+	}
+
+    // Remove the rigid bodies.
+    $rigidShapes = `ls -type "bulletRigidBodyShape"`;
+    if (`size $rigidShapes`)
+    {
+        $toDelete = {};
+
+        string $rs;
+        string $ragdollRoots[];
+
+        for ($rs in $rigidShapes)
+        {
+            // If the rigid body is dynamic, remove the pairBlend node before the rigid
+            // body gets deleted.  Otherwise the pairBlend will cause the rigid body's
+            // transform to be reset.
+            if (`getAttr ($rs + ".bodyType")` == 2)
+            {
+                string $pbs[] = `listConnections -type "pairBlend" $rs`;
+                string $pairBlends[] = stringArrayRemoveDuplicates($pbs);
+                if (`size $pairBlends`)
+                {
+                    string $pb;
+                    for ($pb in $pairBlends)
+                        delete $pb;
+                }
+            }
+
+            // rigid body transform has no more children so it is safe 
+            // to delete.
+            string $parents[] = `listRelatives -parent $rs`;
+
+            if (size(listSiblings($rs,$parents[0])) == 0)
+            {
+                $toDelete[(size($toDelete))] = $parents[0];
+            }
+            else
+            {
+                $toDelete[(size($toDelete))] = $rs;
+            }
+
+            // If grand-parent is a transform and it's name starts with 'Ragdoll'
+            // NOTE: if the root was renamed then we don't delete because
+            // we cannot differentiate between a locator created by the user
+            // and one created by the bullet system.
+            string $grandparents[] = `listRelatives -parent $parents`;
+
+            if (`size($grandparents)` && `startsWith $grandparents[0] "Ragdoll"` )
+            {
+                $ragdollRoots[(size($ragdollRoots))] = $grandparents[0];
+            }
+
+        }
+
+        if (size($toDelete))
+            delete $toDelete;
+
+        // check collected ragdoll roots, if they have no more children
+        // then they are safe to delete.
+        $toDelete = {};
+
+        for ($ragdollRoot in $ragdollRoots)
+        {
+            $childNodes = `listRelatives -children $ragdollRoot`;
+            if (size($childNodes)==0)
+            {
+                $toDelete[(size($toDelete))] = $ragdollRoot;
+            }
+        }
+
+        if (size($toDelete))
+            delete $toDelete;
+
+    }
+
+	// Delete rigid sets.
+	$toDelete = {};
+
+	$rigidSets = `ls -type "bulletRigidSet"`;
+	if (`size $rigidSets`)
+	{
+		// restore original shapes
+		for ($rs in $rigidSets)
+		{
+			$rsMembers = `sets -q $rs`;
+
+			if (`size $rsMembers`) 
+			{
+				showHidden $rsMembers;
+			}
+		}
+
+		$toDelete = $rigidSets;
+	}
+
+	// find the solved meshes
+	$rigidSolved = `ls -type "bulletRigidCollection"`;
+
+	if (`size $rigidSolved`)
+	{
+		for ($rs in $rigidSolved)
+		{
+			$solvedMeshes = find_first_mesh( $rs );
+
+			if (`size $solvedMeshes`) {
+				$toDelete[(size($toDelete))] = stringArrayToString($solvedMeshes, ",");
+			}
+		}
+	}
+
+	if (size($toDelete))
+		delete $toDelete;
+
+    // Delete the soft bodies.
+    $softShapes = `ls -type "bulletSoftBodyShape"`;
+    $toDelete = $softShapes;
+
+    // remove solved meshes and restore original mesh shapes
+
+    for ($sb in $softShapes)
+    {
+        $inputMesh = `listConnections -s true -d false -shapes true -type "mesh" $sb `;
+
+	    // restore original shapes
+		for ($ip in $inputMesh)
+			setAttr ($ip + ".intermediateObject") false;
+
+		// remove transform nodes for meshes where not solved under original
+		$inputT = `listRelatives -p $inputMesh`;
+        $solvedMesh = `listConnections -s false -d true -shapes true -type "mesh" $sb `;
+		$solvedT = `listRelatives -p $solvedMesh`;
+
+		$solvedT = `stringArrayRemove $inputT $solvedT`;
+
+		if (size($solvedT))
+			$toDelete[(size($toDelete))] = stringArrayToString($solvedT, ",");
+		else
+			$toDelete[(size($toDelete))] = stringArrayToString($solvedMesh, ",");
+    }
+
+    if (size($toDelete))
+        delete $toDelete;
+
+    // Remove the solver nodes.
+    $bulletSolvers = `ls -type "bulletSolverShape"`;
+    for ($bulletSolver in $bulletSolvers)
+    {
+        $solverParent = `listRelatives -p $bulletSolver`;
+        if (`size $solverParent`)
+            delete $solverParent;
+    }
+}
+
+global proc bullet_EnableExportMenuItems(string $items[])
+{
+    loadPlugin -qt AbcBullet;
+    int $enable  = `pluginInfo -q -loaded AbcBullet`;
+    string $item = "";
+    for ($item in $items) {
+        menuItem -e -en $enable $item;
+    }
+}

@@ -1,0 +1,36 @@
+// Copyright 2014 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//-
+// ==========================================================================
+//
+// ==========================================================================
+//+
+
+// You must load the plugin before using this script.
+//
+
+// Create the plane mesh
+//
+string $transformName = `createNode transform -n blindDataShaderEx1`;
+string $shapeNodeName = `createNode mesh -n blindDataShape1 -p $transformName`;
+sets -add initialShadingGroup $shapeNodeName;
+string $meshNodeName = `createNode blindDataMesh -n blindDataMesh1`;
+connectAttr ($meshNodeName+".outputMesh") ($shapeNodeName+".inMesh");
+
+// Create an empty UV set for the mesh, so that the shader can run
+//
+polyUVSet -create -uvSet "blindDataMeshUVSet";
+
+// Create the shader and attach it to a phong shader
+//
+string $shaderNodeName = `createNode blindDataShader -n blindDataShader1`;
+string $phongNodeName = `createNode phong`;
+source "buildShaderMenus.mel";
+assignSG $phongNodeName $shapeNodeName;
+connectAttr ($shaderNodeName+".outColor") ($phongNodeName+".hardwareShader");
+

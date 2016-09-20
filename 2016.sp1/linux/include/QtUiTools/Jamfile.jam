@@ -1,0 +1,5 @@
+AWSubDir TOP platform linuxamd64 Components ExternalLibraries Qt 4.8.6 include QtUiTools ;
+
+AWInstallHeader QUiLoader : install 3rd ;
+AWInstallHeader QtUiTools : install 3rd ;
+AWInstallHeader quiloader.h : install 3rd ;
