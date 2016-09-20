@@ -1,0 +1,28 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Fortran module files
+*.mod
+*.smod
+
+# Temporary files
+*~
+.*.swp # vim
+*.flc # xemacs
+.DS_Store # MacOS
+Thumbs.db # Windows
+
+# Python
+*.pyc
+
+
